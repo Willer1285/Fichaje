@@ -317,7 +317,7 @@ def get_today_attendance(db = Depends(get_db)):
         fin_dia = hoy.replace(hour=23, minute=59, second=59)
         
         # Obtener todos los empleados activos para detectar ausentes
-        empleados_activos = db.listar_empleados(solo_activos=True)
+        empleados_activos = db.listar_empleados(incluir_inactivos=False)
         fichajes = db.obtener_todos_fichajes_periodo(inicio_dia, fin_dia)
         
         # Map de fichajes por empleado
@@ -437,7 +437,7 @@ def get_dashboard_stats(period: str = "day", db = Depends(get_db)):
         ts_fin_ant = fecha_fin_anterior.replace(hour=23, minute=59, second=59)
 
         # Obtener datos base
-        empleados_activos = db.listar_empleados(solo_activos=True)
+        empleados_activos = db.listar_empleados(incluir_inactivos=False)
         total_activos = len(empleados_activos)
         config = db.obtener_configuracion()
         turnos = {t.id: t for t in db.listar_turnos()}

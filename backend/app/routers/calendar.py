@@ -57,7 +57,7 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
         # 2. Vacaciones Aprobadas
         # Necesitamos un método para obtener vacaciones por rango de fechas de todos los empleados
         # Como no existe, iteramos empleados activos (no es lo más óptimo pero funciona)
-        empleados = db.listar_empleados(solo_activos=True)
+        empleados = db.listar_empleados(incluir_inactivos=False)
         for emp in empleados:
             vacs = db.obtener_solicitudes_empleado(emp.id, incluir_historial=True)
             for v in vacs:

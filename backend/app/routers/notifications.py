@@ -90,7 +90,7 @@ def get_dashboard_alerts(db = Depends(get_db)):
                 })
 
         # 2. Empleados que NO han fichado hoy (ausentes sin justificar)
-        empleados_activos = db.listar_empleados(solo_activos=True)
+        empleados_activos = db.listar_empleados(incluir_inactivos=False)
         empleados_con_fichaje = set(f.empleado_id for f, _ in fichajes_hoy)
 
         for emp in empleados_activos:

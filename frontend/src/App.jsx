@@ -581,16 +581,14 @@ function App() {
                 <StatCard
                   title="Personal Activo"
                   value={stats.activeEmployees}
-                  percentage={stats.activeEmployeesPercentage}
                   icon={<Users />}
                   color="text-emerald-600 bg-emerald-100"
                   trend="Total"
                   trendColor="bg-emerald-100 text-emerald-700"
                 />
                 <StatCard
-                  title="Fichajes"
+                  title="Fichajes Hoy"
                   value={stats.checkinsToday}
-                  percentage={stats.checkinsPercentage}
                   icon={<Clock />}
                   color="text-primary bg-blue-100"
                   trend={stats.checkinsTrend}
@@ -599,7 +597,6 @@ function App() {
                 <StatCard
                   title="Retrasos"
                   value={stats.late}
-                  percentage={stats.latePercentage}
                   icon={<Clock />}
                   color="text-amber-600 bg-amber-100"
                   trend={stats.lateTrend}
@@ -608,7 +605,6 @@ function App() {
                 <StatCard
                   title="Ausencias"
                   value={stats.absent}
-                  percentage={stats.absentPercentage}
                   icon={<Users />}
                   color="text-red-600 bg-red-100"
                   trend={stats.absentTrend}
@@ -748,7 +744,7 @@ function SidebarItem({ icon, text, active, onClick }) {
   );
 }
 
-function StatCard({ title, value, percentage, icon, color, trend, trendColor }) {
+function StatCard({ title, value, icon, color, trend, trendColor }) {
   return (
     <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
       <div className="flex justify-between items-start mb-6">
@@ -760,14 +756,7 @@ function StatCard({ title, value, percentage, icon, color, trend, trendColor }) 
         </span>
       </div>
       <h3 className="text-slate-500 text-sm font-medium mb-1 pl-1">{title}</h3>
-      <div className="flex items-baseline gap-3 pl-1">
-        <p className="text-4xl font-bold text-slate-800">{value}</p>
-        {percentage !== undefined && (
-          <span className="text-lg font-bold text-slate-400">
-            ({percentage}%)
-          </span>
-        )}
-      </div>
+      <p className="text-4xl font-bold text-slate-800 pl-1">{value}</p>
     </div>
   );
 }
