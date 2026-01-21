@@ -1,0 +1,29 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files
+*.py text eol=lf
+*.pyi text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Documents
+*.md text eol=lf
+*.txt text eol=lf
+
+# Database files
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary

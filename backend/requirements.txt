@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+python-multipart
+qrcode
+pillow
+reportlab
+opencv-python-headless
+numpy
+xlsxwriter
+openpyxl
+bcrypt
