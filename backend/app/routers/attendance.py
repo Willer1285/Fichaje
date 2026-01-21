@@ -316,9 +316,13 @@ def get_today_attendance(db = Depends(get_db)):
         inicio_dia = hoy.replace(hour=0, minute=0, second=0)
         fin_dia = hoy.replace(hour=23, minute=59, second=59)
         
-        # Obtener todos los empleados activos para detectar ausentes
-        empleados_activos = db.listar_empleados(incluir_inactivos=False)
+        # Obtener todos los empleados activos para detectar ausentes (EXCLUIR ADMINISTRADORES)
+        todos_empleados = db.listar_empleados(incluir_inactivos=False)
+        empleados_activos = [e for e in todos_empleados if not (e.es_admin or e.es_superadmin)]
+
         fichajes = db.obtener_todos_fichajes_periodo(inicio_dia, fin_dia)
+        # Filtrar fichajes de administradores
+        fichajes = [(f, e) for f, e in fichajes if not (e.es_admin or e.es_superadmin)]
         
         # Map de fichajes por empleado
         fichajes_map = {f.empleado_id: (f, e) for f, e in fichajes}
@@ -436,8 +440,9 @@ def get_dashboard_stats(period: str = "day", db = Depends(get_db)):
         ts_inicio_ant = fecha_inicio_anterior.replace(hour=0, minute=0, second=0)
         ts_fin_ant = fecha_fin_anterior.replace(hour=23, minute=59, second=59)
 
-        # Obtener datos base
-        empleados_activos = db.listar_empleados(incluir_inactivos=False)
+        # Obtener datos base (EXCLUIR ADMINISTRADORES)
+        todos_empleados = db.listar_empleados(incluir_inactivos=False)
+        empleados_activos = [e for e in todos_empleados if not (e.es_admin or e.es_superadmin)]
         total_activos = len(empleados_activos)
         config = db.obtener_configuracion()
         turnos = {t.id: t for t in db.listar_turnos()}
@@ -445,8 +450,11 @@ def get_dashboard_stats(period: str = "day", db = Depends(get_db)):
         # Función auxiliar de cálculo
         def calcular_metricas(inicio, fin):
             # print(f"DEBUG: Calculando métricas desde {inicio} hasta {fin}")
-            fichajes = db.obtener_todos_fichajes_periodo(inicio, fin)
-            
+            todos_fichajes = db.obtener_todos_fichajes_periodo(inicio, fin)
+
+            # EXCLUIR FICHAJES DE ADMINISTRADORES
+            fichajes = [(f, e) for f, e in todos_fichajes if not (e.es_admin or e.es_superadmin)]
+
             total_fichajes = len(fichajes)
             retrasos = 0
             

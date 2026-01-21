@@ -39,7 +39,7 @@ def get_admin_notifications(db = Depends(get_db)):
 
 @router.get("/alerts")
 def get_dashboard_alerts(db = Depends(get_db)):
-    """Obtiene alertas detalladas para el dashboard (Llegadas tarde, ausencias, etc)"""
+    """Obtiene todas las actividades del día para mostrar en Alertas del Día"""
     try:
         hoy = datetime.now()
         inicio_dia = hoy.replace(hour=0, minute=0, second=0)
@@ -47,53 +47,97 @@ def get_dashboard_alerts(db = Depends(get_db)):
 
         alerts = []
 
-        # 1. Llegadas tarde de HOY
+        # Obtener todos los fichajes de HOY (excluyendo administradores)
         fichajes_hoy = db.obtener_todos_fichajes_periodo(inicio_dia, fin_dia)
         turnos = {t.id: t for t in db.listar_turnos()}
         config = db.obtener_configuracion()
 
+        # 1. FICHAJES COMPLETADOS (tipo success/verde)
+        # 2. LLEGADAS TARDE (tipo warning/amarillo)
         for fichaje, empleado in fichajes_hoy:
-            if not fichaje.hora_entrada: continue
+            # EXCLUIR ADMINISTRADORES
+            if empleado.es_admin or empleado.es_superadmin:
+                continue
 
-            hora_inicio_esperada = None
+            if not fichaje.hora_entrada:
+                continue
+
+            # Si el fichaje está completo (tiene salida)
+            if fichaje.hora_salida:
+                # Calcular si llegó tarde
+                es_tarde = False
+                minutos_tarde = 0
+
+                if empleado.turno_id and empleado.turno_id in turnos:
+                    turno = turnos[empleado.turno_id]
+                    try:
+                        h, m = map(int, turno.hora_inicio.split(":"))
+                        hora_inicio_esperada = fichaje.hora_entrada.replace(hour=h, minute=m, second=0)
+                        limite = hora_inicio_esperada + datetime.timedelta(minutes=config.tiempo_tolerancia_minutos)
+
+                        if fichaje.hora_entrada > limite:
+                            es_tarde = True
+                            diff = fichaje.hora_entrada - hora_inicio_esperada
+                            minutos_tarde = int(diff.total_seconds() / 60)
+                    except:
+                        pass
+
+                # Alerta de fichaje completado
+                alerts.append({
+                    "id": f"completed_{fichaje.id}",
+                    "type": "success",
+                    "title": "Fichaje completado",
+                    "message": f"{empleado.nombre} {empleado.apellidos} finalizó su jornada",
+                    "time": fichaje.hora_salida.strftime("%I:%M %p"),
+                    "details": {
+                        "empleado": f"{empleado.nombre} {empleado.apellidos}",
+                        "hora_entrada": fichaje.hora_entrada.strftime("%I:%M %p"),
+                        "hora_salida": fichaje.hora_salida.strftime("%I:%M %p"),
+                        "es_tarde": es_tarde,
+                        "minutos_tarde": minutos_tarde if es_tarde else 0
+                    }
+                })
+
+            # Si llegó tarde (independiente de si completó o no)
             if empleado.turno_id and empleado.turno_id in turnos:
                 turno = turnos[empleado.turno_id]
                 try:
                     h, m = map(int, turno.hora_inicio.split(":"))
                     hora_inicio_esperada = fichaje.hora_entrada.replace(hour=h, minute=m, second=0)
+                    limite = hora_inicio_esperada + datetime.timedelta(minutes=config.tiempo_tolerancia_minutos)
+
+                    if fichaje.hora_entrada > limite:
+                        diff = fichaje.hora_entrada - hora_inicio_esperada
+                        minutos_tarde = int(diff.total_seconds() / 60)
+                        alerts.append({
+                            "id": f"late_{fichaje.id}",
+                            "type": "warning",
+                            "title": "Retraso registrado",
+                            "message": f"{empleado.nombre} {empleado.apellidos} - {minutos_tarde} min tarde",
+                            "time": fichaje.hora_entrada.strftime("%I:%M %p"),
+                            "details": {
+                                "empleado": f"{empleado.nombre} {empleado.apellidos}",
+                                "empleado_id": empleado.id,
+                                "dni": empleado.dni,
+                                "departamento": empleado.cargo or "N/A",
+                                "hora_llegada": fichaje.hora_entrada.strftime("%I:%M %p"),
+                                "hora_esperada": hora_inicio_esperada.strftime("%I:%M %p"),
+                                "minutos_tarde": minutos_tarde,
+                                "fecha": fichaje.fecha.strftime("%Y-%m-%d")
+                            }
+                        })
                 except:
-                    continue
-            else:
-                continue
+                    pass
 
-            limite = hora_inicio_esperada + datetime.timedelta(minutes=config.tiempo_tolerancia_minutos)
-
-            if fichaje.hora_entrada > limite:
-                diff = fichaje.hora_entrada - hora_inicio_esperada
-                minutos_tarde = int(diff.total_seconds() / 60)
-                alerts.append({
-                    "id": f"late_{fichaje.id}",
-                    "type": "warning",
-                    "title": "Llegada Tarde",
-                    "message": f"{empleado.nombre} {empleado.apellidos} llegó {minutos_tarde} min tarde",
-                    "time": fichaje.hora_entrada.strftime("%I:%M %p"),
-                    "details": {
-                        "empleado": f"{empleado.nombre} {empleado.apellidos}",
-                        "empleado_id": empleado.id,
-                        "dni": empleado.dni,
-                        "departamento": empleado.cargo or "N/A",
-                        "hora_llegada": fichaje.hora_entrada.strftime("%I:%M %p"),
-                        "hora_esperada": hora_inicio_esperada.strftime("%I:%M %p"),
-                        "minutos_tarde": minutos_tarde,
-                        "fecha": fichaje.fecha.strftime("%Y-%m-%d")
-                    }
-                })
-
-        # 2. Empleados que NO han fichado hoy (ausentes sin justificar)
+        # 3. AUSENCIAS SIN JUSTIFICAR (tipo error/rojo)
         empleados_activos = db.listar_empleados(incluir_inactivos=False)
         empleados_con_fichaje = set(f.empleado_id for f, _ in fichajes_hoy)
 
         for emp in empleados_activos:
+            # EXCLUIR ADMINISTRADORES
+            if emp.es_admin or emp.es_superadmin:
+                continue
+
             if emp.id not in empleados_con_fichaje:
                 # Verificar si tiene una justificación previa (ausencia o vacaciones aprobadas)
                 ausencias = db.obtener_ausencias_empleado(emp.id, incluir_historial=True)
@@ -121,9 +165,9 @@ def get_dashboard_alerts(db = Depends(get_db)):
                     alerts.append({
                         "id": f"absent_{emp.id}",
                         "type": "error",
-                        "title": "Ausencia sin Justificar",
+                        "title": "Ausencia sin justificar",
                         "message": f"{emp.nombre} {emp.apellidos} no ha fichado hoy",
-                        "time": hoy.strftime("%I:%M %p"),
+                        "time": "Hace 2 horas",
                         "details": {
                             "empleado": f"{emp.nombre} {emp.apellidos}",
                             "empleado_id": emp.id,
@@ -134,8 +178,38 @@ def get_dashboard_alerts(db = Depends(get_db)):
                         }
                     })
 
+        # 4. SOLICITUDES DE VACACIONES DEL DÍA (tipo info/azul)
+        todos_empleados = db.listar_empleados(incluir_inactivos=False)
+        for emp in todos_empleados:
+            # EXCLUIR ADMINISTRADORES
+            if emp.es_admin or emp.es_superadmin:
+                continue
+
+            solicitudes = db.obtener_solicitudes_empleado(emp.id, incluir_historial=True)
+            for solicitud in solicitudes:
+                # Solo mostrar solicitudes creadas hoy
+                if solicitud.fecha_solicitud and solicitud.fecha_solicitud.date() == hoy.date():
+                    tipo_emoji = "🏖️" if solicitud.tipo == "vacaciones_anuales" else "📅"
+                    estado_text = "pendiente" if solicitud.estado == "pendiente" else solicitud.estado
+
+                    alerts.append({
+                        "id": f"request_{solicitud.id}",
+                        "type": "info",
+                        "title": "Solicitud de cambio",
+                        "message": f"{emp.nombre} {emp.apellidos} solicitó cambio de horario",
+                        "time": solicitud.fecha_solicitud.strftime("%I:%M %p") if solicitud.fecha_solicitud else "Hoy",
+                        "details": {
+                            "empleado": f"{emp.nombre} {emp.apellidos}",
+                            "tipo": solicitud.tipo.replace("_", " ").title(),
+                            "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
+                            "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
+                            "dias": solicitud.dias_solicitados,
+                            "estado": estado_text
+                        }
+                    })
+
         # Ordenar por tiempo (más recientes primero)
-        alerts.sort(key=lambda x: x['time'], reverse=True)
+        # alerts.sort(key=lambda x: x['time'], reverse=True)
 
         return alerts
 

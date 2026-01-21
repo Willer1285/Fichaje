@@ -343,16 +343,28 @@ function App() {
                                 <p>No hay alertas activas hoy</p>
                             </div>
                         ) : (
-                            dashboardAlerts.map(alert => (
+                            dashboardAlerts.map(alert => {
+                                const alertStyles = {
+                                    success: 'bg-green-50 border-green-500 hover:bg-green-100',
+                                    error: 'bg-red-50 border-red-500 hover:bg-red-100',
+                                    warning: 'bg-amber-50 border-amber-500 hover:bg-amber-100',
+                                    info: 'bg-blue-50 border-blue-500 hover:bg-blue-100'
+                                };
+                                const alertTitleStyles = {
+                                    success: 'text-green-800',
+                                    error: 'text-red-800',
+                                    warning: 'text-amber-800',
+                                    info: 'text-blue-800'
+                                };
+
+                                return (
                                 <div
                                     key={alert.id}
                                     onClick={() => handleAlertClick(alert)}
-                                    className={`p-4 rounded-xl border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all ${
-                                        alert.type === 'error' ? 'bg-red-50 border-red-500 hover:bg-red-100' : 'bg-amber-50 border-amber-500 hover:bg-amber-100'
-                                    }`}
+                                    className={`p-4 rounded-xl border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all ${alertStyles[alert.type] || alertStyles.info}`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
-                                        <h4 className={`font-bold ${alert.type === 'error' ? 'text-red-800' : 'text-amber-800'}`}>
+                                        <h4 className={`font-bold ${alertTitleStyles[alert.type] || 'text-slate-800'}`}>
                                             {alert.title}
                                         </h4>
                                         <span className="text-xs font-bold bg-white/50 px-2 py-1 rounded text-slate-600">{alert.time}</span>
@@ -375,7 +387,8 @@ function App() {
                                     )}
                                     <p className="text-xs text-slate-400 mt-2 font-medium">Click para ver detalles completos</p>
                                 </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
@@ -799,12 +812,14 @@ function TableRow({ name, id, dept, inTime, outTime, status }) {
 
 function NotificationItem({ title, desc, time, type, onClick }) {
   const styles = {
+    success: 'bg-green-50 text-green-900 border-green-100 hover:border-green-200 hover:shadow-md',
     error: 'bg-red-50 text-red-900 border-red-100 hover:border-red-200 hover:shadow-md',
     warning: 'bg-amber-50 text-amber-900 border-amber-100 hover:border-amber-200 hover:shadow-md',
     info: 'bg-blue-50 text-blue-900 border-blue-100 hover:border-blue-200 hover:shadow-md'
   };
 
   const icons = {
+    success: <div className="w-2 h-2 rounded-full bg-green-500"></div>,
     error: <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>,
     warning: <Clock className="w-4 h-4 text-amber-600" />,
     info: <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold border border-blue-200">i</div>
