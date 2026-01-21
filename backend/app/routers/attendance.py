@@ -510,17 +510,50 @@ def get_dashboard_stats(period: str = "day", db = Depends(get_db)):
             sign = "+" if diff > 0 else "-" if diff < 0 else ""
             return f"{sign}{abs(int(diff))}%"
 
+        # Calcular porcentajes respecto al total de empleados activos
+        def calc_percentage(valor, total):
+            if total == 0: return 0
+            return round((valor / total) * 100, 1)
+
+        # Calcular totales esperados según período
+        if period == "day":
+            total_esperado = total_activos  # Por día, esperamos 1 fichaje por empleado
+        elif period == "week":
+            # Días laborables esta semana hasta hoy
+            dias_laborables = sum(1 for i in range((fecha_fin_actual - fecha_inicio_actual).days + 1)
+                                 if (fecha_inicio_actual + timedelta(days=i)).weekday() < 5
+                                 and (fecha_inicio_actual + timedelta(days=i)) <= hoy)
+            total_esperado = total_activos * dias_laborables
+        elif period == "month":
+            # Días laborables este mes hasta hoy
+            dias_laborables = sum(1 for i in range((fecha_fin_actual - fecha_inicio_actual).days + 1)
+                                 if (fecha_inicio_actual + timedelta(days=i)).weekday() < 5
+                                 and (fecha_inicio_actual + timedelta(days=i)) <= hoy)
+            total_esperado = total_activos * dias_laborables
+        elif period == "year":
+            # Días laborables este año hasta hoy
+            dias_laborables = sum(1 for i in range((fecha_fin_actual - fecha_inicio_actual).days + 1)
+                                 if (fecha_inicio_actual + timedelta(days=i)).weekday() < 5
+                                 and (fecha_inicio_actual + timedelta(days=i)) <= hoy)
+            total_esperado = total_activos * dias_laborables
+        else:
+            total_esperado = total_activos
+
         return {
             "activeEmployees": total_activos,
-            
+            "activeEmployeesPercentage": 100,  # Siempre 100% del total activo
+
             "checkinsToday": fichajes_act,
             "checkinsTrend": calc_trend(fichajes_act, fichajes_ant),
-            
+            "checkinsPercentage": calc_percentage(fichajes_act, total_esperado),
+
             "late": retrasos_act,
             "lateTrend": calc_trend(retrasos_act, retrasos_ant),
-            
+            "latePercentage": calc_percentage(retrasos_act, fichajes_act) if fichajes_act > 0 else 0,
+
             "absent": ausencias_act,
-            "absentTrend": calc_trend(ausencias_act, ausencias_ant)
+            "absentTrend": calc_trend(ausencias_act, ausencias_ant),
+            "absentPercentage": calc_percentage(ausencias_act, total_esperado)
         }
         
     except Exception as e:

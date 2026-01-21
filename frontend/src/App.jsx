@@ -24,9 +24,16 @@ function App() {
   const [period, setPeriod] = useState('day');
   const [stats, setStats] = useState({
     activeEmployees: 0,
+    activeEmployeesPercentage: 100,
     checkinsToday: 0,
+    checkinsTrend: '0%',
+    checkinsPercentage: 0,
     late: 0,
-    absent: 0
+    lateTrend: '0%',
+    latePercentage: 0,
+    absent: 0,
+    absentTrend: '0%',
+    absentPercentage: 0
   });
   const [recentCheckins, setRecentCheckins] = useState([]);
   const [dashboardAlerts, setDashboardAlerts] = useState([]);
@@ -34,6 +41,8 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [alertDetails, setAlertDetails] = useState(null);
   const [config, setConfig] = useState(null);
 
   // Cargar configuración global al inicio
@@ -107,18 +116,47 @@ function App() {
     setUser(null);
   };
 
-  const exportRecentCheckins = () => {
-      const csvContent = "data:text/csv;charset=utf-8," 
-          + "Empleado,Departamento,Entrada,Salida,Estado\n"
-          + recentCheckins.map(row => `${row.empleado_nombre},${row.departamento},${row.hora_entrada},${row.hora_salida},${row.estado}`).join("\n");
-      
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `fichajes_recientes_${new Date().toISOString().split('T')[0]}.csv`);
+  const handleAlertClick = async (alert) => {
+    try {
+      setSelectedAlert(alert);
+      const response = await axios.get(`${API_URL}/notifications/alert/${alert.id}`);
+      setAlertDetails(response.data);
+    } catch (error) {
+      console.error('Error cargando detalles de alerta:', error);
+      // Mostrar detalles básicos si hay error
+      setAlertDetails(alert.details || alert);
+    }
+  };
+
+  const exportRecentCheckins = async (format) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await axios.post(
+        `${API_URL}/reports/generate`,
+        {
+          type: 'todos',
+          start_date: today,
+          end_date: today,
+          format: format
+        },
+        {
+          responseType: 'blob'
+        }
+      );
+
+      // Crear link de descarga
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `fichajes_${today}.${format === 'pdf' ? 'pdf' : 'xlsx'}`);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exportando fichajes:', error);
+      alert('Error al exportar fichajes. Por favor intente de nuevo.');
+    }
   };
 
   if (!user) {
@@ -298,7 +336,7 @@ function App() {
                             <X size={20} className="text-slate-400" />
                         </button>
                     </div>
-                    
+
                     <div className="flex-1 overflow-y-auto pr-2 space-y-4">
                         {dashboardAlerts.length === 0 ? (
                             <div className="text-center py-20 text-slate-400">
@@ -306,9 +344,13 @@ function App() {
                             </div>
                         ) : (
                             dashboardAlerts.map(alert => (
-                                <div key={alert.id} className={`p-4 rounded-xl border-l-4 shadow-sm ${
-                                    alert.type === 'error' ? 'bg-red-50 border-red-500' : 'bg-amber-50 border-amber-500'
-                                }`}>
+                                <div
+                                    key={alert.id}
+                                    onClick={() => handleAlertClick(alert)}
+                                    className={`p-4 rounded-xl border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all ${
+                                        alert.type === 'error' ? 'bg-red-50 border-red-500 hover:bg-red-100' : 'bg-amber-50 border-amber-500 hover:bg-amber-100'
+                                    }`}
+                                >
                                     <div className="flex justify-between items-start mb-2">
                                         <h4 className={`font-bold ${alert.type === 'error' ? 'text-red-800' : 'text-amber-800'}`}>
                                             {alert.title}
@@ -316,7 +358,7 @@ function App() {
                                         <span className="text-xs font-bold bg-white/50 px-2 py-1 rounded text-slate-600">{alert.time}</span>
                                     </div>
                                     <p className="text-sm text-slate-700 mb-2">{alert.message}</p>
-                                    
+
                                     {alert.details && (
                                         <div className="bg-white/50 p-3 rounded-lg text-xs space-y-1">
                                             <div className="flex justify-between">
@@ -331,10 +373,184 @@ function App() {
                                             )}
                                         </div>
                                     )}
+                                    <p className="text-xs text-slate-400 mt-2 font-medium">Click para ver detalles completos</p>
                                 </div>
                             ))
                         )}
                     </div>
+                </div>
+            </div>
+        )}
+
+        {/* Modal Detalles de Alerta */}
+        {selectedAlert && alertDetails && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-3 rounded-xl ${selectedAlert.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                                <AlertTriangle size={28} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-slate-800">{alertDetails.title || selectedAlert.title}</h3>
+                                <p className="text-sm text-slate-500 mt-1">{selectedAlert.time}</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setSelectedAlert(null);
+                                setAlertDetails(null);
+                            }}
+                            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                        >
+                            <X size={24} className="text-slate-400" />
+                        </button>
+                    </div>
+
+                    <div className="space-y-6">
+                        {/* Información del Empleado */}
+                        <div className="bg-slate-50 p-6 rounded-2xl">
+                            <h4 className="text-sm font-bold text-slate-600 uppercase mb-4">Información del Empleado</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-xs text-slate-500">Nombre Completo</p>
+                                    <p className="text-sm font-bold text-slate-800">{alertDetails.empleado?.nombre || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500">DNI</p>
+                                    <p className="text-sm font-bold text-slate-800">{alertDetails.empleado?.dni || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500">Número de Empleado</p>
+                                    <p className="text-sm font-bold text-slate-800">{alertDetails.empleado?.numero_empleado || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500">Departamento</p>
+                                    <p className="text-sm font-bold text-slate-800">{alertDetails.empleado?.departamento || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500">Email</p>
+                                    <p className="text-sm font-bold text-slate-800">{alertDetails.empleado?.email || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500">Teléfono</p>
+                                    <p className="text-sm font-bold text-slate-800">{alertDetails.empleado?.telefono || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Detalles del Fichaje (si es llegada tarde) */}
+                        {alertDetails.fichaje && (
+                            <div className="bg-amber-50 p-6 rounded-2xl">
+                                <h4 className="text-sm font-bold text-amber-800 uppercase mb-4">Detalles del Fichaje</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-amber-600">Fecha</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.fichaje.fecha}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-amber-600">Tipo</p>
+                                        <p className="text-sm font-bold text-slate-800 capitalize">{alertDetails.fichaje.tipo.replace(/_/g, ' ')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-amber-600">Hora Entrada</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.fichaje.hora_entrada}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-amber-600">Hora Salida</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.fichaje.hora_salida}</p>
+                                    </div>
+                                </div>
+                                {alertDetails.fichaje.observaciones && (
+                                    <div className="mt-4 pt-4 border-t border-amber-100">
+                                        <p className="text-xs text-amber-600 mb-1">Observaciones</p>
+                                        <p className="text-sm text-slate-700">{alertDetails.fichaje.observaciones}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Detalles del Retraso */}
+                        {alertDetails.retraso && (
+                            <div className="bg-red-50 p-6 rounded-2xl">
+                                <h4 className="text-sm font-bold text-red-800 uppercase mb-4">Análisis del Retraso</h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="text-xs text-red-600">Hora Esperada</p>
+                                        <p className="text-lg font-bold text-slate-800">{alertDetails.retraso.hora_esperada}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-red-600">Hora Llegada</p>
+                                        <p className="text-lg font-bold text-slate-800">{alertDetails.retraso.hora_llegada}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-red-600">Minutos Tarde</p>
+                                        <p className="text-2xl font-bold text-red-600">{alertDetails.retraso.minutos_tarde}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-red-100">
+                                    <p className="text-xs text-red-600">Tolerancia Configurada</p>
+                                    <p className="text-sm font-bold text-slate-800">{alertDetails.retraso.tolerancia} minutos</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Detalles de Ausencia */}
+                        {alertDetails.ausencia && (
+                            <div className="bg-red-50 p-6 rounded-2xl">
+                                <h4 className="text-sm font-bold text-red-800 uppercase mb-4">Detalles de la Ausencia</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-red-600">Fecha</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.ausencia.fecha}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-red-600">Turno Esperado</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.ausencia.turno_esperado}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-red-600">Hora Inicio</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.ausencia.hora_inicio_esperada}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-red-600">Días Pendientes</p>
+                                        <p className="text-lg font-bold text-red-600">{alertDetails.ausencia.dias_pendientes}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Información del Turno */}
+                        {alertDetails.turno && (
+                            <div className="bg-blue-50 p-6 rounded-2xl">
+                                <h4 className="text-sm font-bold text-blue-800 uppercase mb-4">Información del Turno</h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="text-xs text-blue-600">Turno</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.turno.nombre}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-blue-600">Hora Inicio</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.turno.hora_inicio}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-blue-600">Hora Fin</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.turno.hora_fin}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            setSelectedAlert(null);
+                            setAlertDetails(null);
+                        }}
+                        className="w-full mt-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                    >
+                        Cerrar
+                    </button>
                 </div>
             </div>
         )}
@@ -362,10 +578,42 @@ function App() {
 
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title="Personal Activo" value={stats.activeEmployees} icon={<Users />} color="text-emerald-600 bg-emerald-100" trend="Total" trendColor="bg-emerald-100 text-emerald-700" />
-                <StatCard title="Fichajes" value={stats.checkinsToday} icon={<Clock />} color="text-primary bg-blue-100" trend={stats.checkinsTrend} trendColor="bg-blue-100 text-blue-700" />
-                <StatCard title="Retrasos" value={stats.late} icon={<Clock />} color="text-amber-600 bg-amber-100" trend={stats.lateTrend} trendColor="bg-amber-100 text-amber-700" />
-                <StatCard title="Ausencias" value={stats.absent} icon={<Users />} color="text-red-600 bg-red-100" trend={stats.absentTrend} trendColor="bg-red-100 text-red-700" />
+                <StatCard
+                  title="Personal Activo"
+                  value={stats.activeEmployees}
+                  percentage={stats.activeEmployeesPercentage}
+                  icon={<Users />}
+                  color="text-emerald-600 bg-emerald-100"
+                  trend="Total"
+                  trendColor="bg-emerald-100 text-emerald-700"
+                />
+                <StatCard
+                  title="Fichajes"
+                  value={stats.checkinsToday}
+                  percentage={stats.checkinsPercentage}
+                  icon={<Clock />}
+                  color="text-primary bg-blue-100"
+                  trend={stats.checkinsTrend}
+                  trendColor="bg-blue-100 text-blue-700"
+                />
+                <StatCard
+                  title="Retrasos"
+                  value={stats.late}
+                  percentage={stats.latePercentage}
+                  icon={<Clock />}
+                  color="text-amber-600 bg-amber-100"
+                  trend={stats.lateTrend}
+                  trendColor="bg-amber-100 text-amber-700"
+                />
+                <StatCard
+                  title="Ausencias"
+                  value={stats.absent}
+                  percentage={stats.absentPercentage}
+                  icon={<Users />}
+                  color="text-red-600 bg-red-100"
+                  trend={stats.absentTrend}
+                  trendColor="bg-red-100 text-red-700"
+                />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -374,19 +622,29 @@ function App() {
                   <div className="flex items-center justify-between mb-8">
                     <h3 className="text-xl font-bold text-slate-800">Fichajes de Hoy</h3>
                     <div className="flex gap-2">
-                      <button 
-                        onClick={() => fetchDashboardData()} 
+                      <button
+                        onClick={() => fetchDashboardData()}
                         className="p-2 hover:bg-slate-50 rounded-lg border border-slate-200 text-slate-500"
                         title="Actualizar"
                       >
                           <Filter size={16} />
                       </button>
-                      <button 
-                        onClick={exportRecentCheckins} 
-                        className="px-4 py-2 text-xs font-semibold bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors text-slate-600 flex items-center gap-2"
-                      >
-                          <Download size={14} /> Exportar
-                      </button>
+                      <div className="flex gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                        <button
+                          onClick={() => exportRecentCheckins('excel')}
+                          className="px-3 py-1.5 text-xs font-semibold hover:bg-white rounded-lg transition-colors text-slate-600 flex items-center gap-1.5"
+                          title="Exportar a Excel"
+                        >
+                            <Download size={13} /> Excel
+                        </button>
+                        <button
+                          onClick={() => exportRecentCheckins('pdf')}
+                          className="px-3 py-1.5 text-xs font-semibold hover:bg-white rounded-lg transition-colors text-slate-600 flex items-center gap-1.5"
+                          title="Exportar a PDF"
+                        >
+                            <Download size={13} /> PDF
+                        </button>
+                      </div>
                     </div>
                   </div>
                   
@@ -435,12 +693,13 @@ function App() {
                         <div className="p-4 bg-slate-50 rounded-xl text-center text-sm text-slate-400">Todo en orden hoy</div>
                     ) : (
                         dashboardAlerts.slice(0, 5).map(alert => (
-                            <NotificationItem 
+                            <NotificationItem
                                 key={alert.id}
-                                title={alert.title} 
-                                desc={alert.message} 
-                                time={alert.time} 
-                                type={alert.type} 
+                                title={alert.title}
+                                desc={alert.message}
+                                time={alert.time}
+                                type={alert.type}
+                                onClick={() => handleAlertClick(alert)}
                             />
                         ))
                     )}
@@ -489,7 +748,7 @@ function SidebarItem({ icon, text, active, onClick }) {
   );
 }
 
-function StatCard({ title, value, icon, color, trend, trendColor }) {
+function StatCard({ title, value, percentage, icon, color, trend, trendColor }) {
   return (
     <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
       <div className="flex justify-between items-start mb-6">
@@ -501,7 +760,14 @@ function StatCard({ title, value, icon, color, trend, trendColor }) {
         </span>
       </div>
       <h3 className="text-slate-500 text-sm font-medium mb-1 pl-1">{title}</h3>
-      <p className="text-4xl font-bold text-slate-800 pl-1">{value}</p>
+      <div className="flex items-baseline gap-3 pl-1">
+        <p className="text-4xl font-bold text-slate-800">{value}</p>
+        {percentage !== undefined && (
+          <span className="text-lg font-bold text-slate-400">
+            ({percentage}%)
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -542,11 +808,11 @@ function TableRow({ name, id, dept, inTime, outTime, status }) {
   );
 }
 
-function NotificationItem({ title, desc, time, type }) {
+function NotificationItem({ title, desc, time, type, onClick }) {
   const styles = {
-    error: 'bg-red-50 text-red-900 border-red-100 hover:border-red-200',
-    warning: 'bg-amber-50 text-amber-900 border-amber-100 hover:border-amber-200',
-    info: 'bg-blue-50 text-blue-900 border-blue-100 hover:border-blue-200'
+    error: 'bg-red-50 text-red-900 border-red-100 hover:border-red-200 hover:shadow-md',
+    warning: 'bg-amber-50 text-amber-900 border-amber-100 hover:border-amber-200 hover:shadow-md',
+    info: 'bg-blue-50 text-blue-900 border-blue-100 hover:border-blue-200 hover:shadow-md'
   };
 
   const icons = {
@@ -556,7 +822,10 @@ function NotificationItem({ title, desc, time, type }) {
   };
 
   return (
-    <div className={`p-4 rounded-2xl border transition-all cursor-pointer ${styles[type]}`}>
+    <div
+      onClick={onClick}
+      className={`p-4 rounded-2xl border transition-all cursor-pointer ${styles[type]}`}
+    >
       <div className="flex gap-4 items-start">
         <div className="mt-1">{icons[type]}</div>
         <div className="flex-1">

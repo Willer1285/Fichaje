@@ -198,26 +198,135 @@ function CalendarPage() {
                   <p>No hay actividad registrada</p>
                 </div>
               ) : (
-                dayEvents.map(evt => (
-                  <div 
-                    key={evt.id} 
-                    className="p-4 rounded-xl border-l-4 bg-slate-50 hover:bg-white hover:shadow-md transition-all border-l-[3px]"
-                    style={{ borderLeftColor: evt.backgroundColor }}
-                  >
-                    <h4 className="font-bold text-slate-800 text-sm mb-1">{evt.title}</h4>
-                    <div className="flex items-center gap-4 text-xs text-slate-500">
-                        {evt.extendedProps.checkIn && (
-                            <span className="flex items-center gap-1"><Clock size={12} /> {evt.extendedProps.checkIn}</span>
+                <div className="space-y-3">
+                  {/* Agrupar eventos por tipo */}
+                  {(() => {
+                    const attendances = dayEvents.filter(e => e.extendedProps.type === 'attendance');
+                    const vacations = dayEvents.filter(e => e.extendedProps.type === 'vacation');
+                    const absences = dayEvents.filter(e => e.extendedProps.type === 'absence');
+
+                    return (
+                      <>
+                        {/* Fichajes/Asistencias */}
+                        {attendances.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-2">
+                              Fichajes del Día ({attendances.length})
+                            </h5>
+                            {attendances.map(evt => (
+                              <div
+                                key={evt.id}
+                                className="p-4 rounded-xl border-l-4 bg-slate-50 hover:bg-white hover:shadow-md transition-all"
+                                style={{ borderLeftColor: evt.backgroundColor }}
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <h4 className="font-bold text-slate-800 text-sm">{evt.extendedProps.employee}</h4>
+                                  {evt.extendedProps.late && (
+                                    <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold">
+                                      Tarde
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="space-y-1 text-xs text-slate-600">
+                                  <div className="flex items-center gap-2">
+                                    <Clock size={12} className="text-slate-400" />
+                                    <span className="font-medium">Entrada:</span>
+                                    <span className="font-bold">{evt.extendedProps.checkIn}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <User size={12} className="text-slate-400" />
+                                    <span className="font-medium">Estado:</span>
+                                    <span className={`font-bold ${evt.extendedProps.late ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                      {evt.extendedProps.late ? 'Llegó tarde' : 'A tiempo'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        {evt.extendedProps.type === 'vacation' && (
-                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Vacaciones</span>
+
+                        {/* Vacaciones */}
+                        {vacations.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-2">
+                              Vacaciones ({vacations.length})
+                            </h5>
+                            {vacations.map(evt => (
+                              <div
+                                key={evt.id}
+                                className="p-4 rounded-xl border-l-4 bg-blue-50 hover:bg-blue-100 hover:shadow-md transition-all border-blue-500"
+                              >
+                                <h4 className="font-bold text-slate-800 text-sm mb-1">
+                                  {evt.extendedProps.employee}
+                                </h4>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">
+                                    De Vacaciones
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        {evt.extendedProps.type === 'absence' && (
-                            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded capitalize">{evt.extendedProps.reason}</span>
+
+                        {/* Ausencias */}
+                        {absences.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-2">
+                              Ausencias ({absences.length})
+                            </h5>
+                            {absences.map(evt => (
+                              <div
+                                key={evt.id}
+                                className="p-4 rounded-xl border-l-4 bg-red-50 hover:bg-red-100 hover:shadow-md transition-all border-red-500"
+                              >
+                                <h4 className="font-bold text-slate-800 text-sm mb-2">
+                                  {evt.extendedProps.employee}
+                                </h4>
+                                <div className="space-y-1 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-600">Tipo:</span>
+                                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold capitalize">
+                                      {evt.extendedProps.reason?.replace(/_/g, ' ')}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
-                    </div>
-                  </div>
-                ))
+
+                        {/* Resumen */}
+                        <div className="mt-4 pt-4 border-t border-slate-200">
+                          <div className="grid grid-cols-3 gap-4 text-center">
+                            <div className="bg-emerald-50 p-3 rounded-xl">
+                              <p className="text-2xl font-bold text-emerald-600">{attendances.length}</p>
+                              <p className="text-xs text-slate-500 font-medium">Fichajes</p>
+                            </div>
+                            <div className="bg-blue-50 p-3 rounded-xl">
+                              <p className="text-2xl font-bold text-blue-600">{vacations.length}</p>
+                              <p className="text-xs text-slate-500 font-medium">Vacaciones</p>
+                            </div>
+                            <div className="bg-red-50 p-3 rounded-xl">
+                              <p className="text-2xl font-bold text-red-600">{absences.length}</p>
+                              <p className="text-xs text-slate-500 font-medium">Ausencias</p>
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center">
+                            <p className="text-xs text-slate-400">
+                              {attendances.filter(e => e.extendedProps.late).length > 0 && (
+                                <span className="text-amber-600 font-bold">
+                                  {attendances.filter(e => e.extendedProps.late).length} llegada(s) tarde
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               )}
             </div>
           </div>
