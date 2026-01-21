@@ -324,22 +324,22 @@ function App() {
         {/* Modal Alertas Detalladas */}
         {showAlertsModal && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl p-6 animate-in zoom-in-95 h-[80vh] flex flex-col">
-                    <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
-                                <AlertTriangle size={24} />
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl p-5 animate-in zoom-in-95 max-h-[85vh] flex flex-col" style={{ fontSize: '12px' }}>
+                    <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
+                                <AlertTriangle size={20} />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800">Alertas del Día</h3>
+                            <h3 className="text-lg font-bold text-slate-800">Alertas del Día</h3>
                         </div>
-                        <button onClick={() => setShowAlertsModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                            <X size={20} className="text-slate-400" />
+                        <button onClick={() => setShowAlertsModal(false)} className="p-1.5 hover:bg-slate-100 rounded-full">
+                            <X size={18} className="text-slate-400" />
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-2.5">
                         {dashboardAlerts.length === 0 ? (
-                            <div className="text-center py-20 text-slate-400">
+                            <div className="text-center py-12 text-slate-400 text-xs">
                                 <p>No hay alertas activas hoy</p>
                             </div>
                         ) : (
@@ -361,18 +361,18 @@ function App() {
                                 <div
                                     key={alert.id}
                                     onClick={() => handleAlertClick(alert)}
-                                    className={`p-4 rounded-xl border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all ${alertStyles[alert.type] || alertStyles.info}`}
+                                    className={`p-3 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all ${alertStyles[alert.type] || alertStyles.info}`}
                                 >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h4 className={`font-bold ${alertTitleStyles[alert.type] || 'text-slate-800'}`}>
+                                    <div className="flex justify-between items-start mb-1.5">
+                                        <h4 className={`font-bold text-xs ${alertTitleStyles[alert.type] || 'text-slate-800'}`}>
                                             {alert.title}
                                         </h4>
-                                        <span className="text-xs font-bold bg-white/50 px-2 py-1 rounded text-slate-600">{alert.time}</span>
+                                        <span className="text-[10px] font-bold bg-white/50 px-1.5 py-0.5 rounded text-slate-600">{alert.time}</span>
                                     </div>
-                                    <p className="text-sm text-slate-700 mb-2">{alert.message}</p>
+                                    <p className="text-xs text-slate-700 mb-1.5">{alert.message}</p>
 
                                     {alert.details && (
-                                        <div className="bg-white/50 p-3 rounded-lg text-xs space-y-1">
+                                        <div className="bg-white/50 p-2 rounded-lg text-[10px] space-y-0.5">
                                             <div className="flex justify-between">
                                                 <span className="text-slate-500">Empleado:</span>
                                                 <span className="font-bold">{alert.details.empleado}</span>
@@ -385,7 +385,7 @@ function App() {
                                             )}
                                         </div>
                                     )}
-                                    <p className="text-xs text-slate-400 mt-2 font-medium">Click para ver detalles completos</p>
+                                    <p className="text-[10px] text-slate-400 mt-1.5 font-medium">Click para ver detalles</p>
                                 </div>
                                 );
                             })
@@ -692,16 +692,16 @@ function App() {
                 </div>
 
                 {/* Alerts Panel */}
-                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8 h-fit sticky top-8">
-                  <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                      <AlertTriangle size={20} className="text-amber-500" />
+                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 h-fit sticky top-8">
+                  <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <AlertTriangle size={18} className="text-amber-500" />
                       Alertas del Día
                   </h3>
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                  <div className="space-y-2">
                     {dashboardAlerts.length === 0 ? (
-                        <div className="p-4 bg-slate-50 rounded-xl text-center text-sm text-slate-400">Todo en orden hoy</div>
+                        <div className="p-3 bg-slate-50 rounded-xl text-center text-xs text-slate-400">Todo en orden hoy</div>
                     ) : (
-                        dashboardAlerts.slice(0, 5).map(alert => (
+                        dashboardAlerts.map(alert => (
                             <NotificationItem
                                 key={alert.id}
                                 title={alert.title}
@@ -713,10 +713,10 @@ function App() {
                         ))
                     )}
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => setShowAlertsModal(true)}
-                    className="w-full mt-6 py-3 text-sm font-semibold text-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-colors"
+                    className="w-full mt-4 py-2 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-colors"
                   >
                     Ver todas las alertas
                   </button>
@@ -812,29 +812,30 @@ function TableRow({ name, id, dept, inTime, outTime, status }) {
 
 function NotificationItem({ title, desc, time, type, onClick }) {
   const styles = {
-    success: 'bg-green-50 text-green-900 border-green-100 hover:border-green-200 hover:shadow-md',
-    error: 'bg-red-50 text-red-900 border-red-100 hover:border-red-200 hover:shadow-md',
-    warning: 'bg-amber-50 text-amber-900 border-amber-100 hover:border-amber-200 hover:shadow-md',
-    info: 'bg-blue-50 text-blue-900 border-blue-100 hover:border-blue-200 hover:shadow-md'
+    success: 'bg-green-50 text-green-900 border-green-100 hover:border-green-200 hover:shadow-sm',
+    error: 'bg-red-50 text-red-900 border-red-100 hover:border-red-200 hover:shadow-sm',
+    warning: 'bg-amber-50 text-amber-900 border-amber-100 hover:border-amber-200 hover:shadow-sm',
+    info: 'bg-blue-50 text-blue-900 border-blue-100 hover:border-blue-200 hover:shadow-sm'
   };
 
   const icons = {
-    success: <div className="w-2 h-2 rounded-full bg-green-500"></div>,
-    error: <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>,
-    warning: <Clock className="w-4 h-4 text-amber-600" />,
-    info: <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold border border-blue-200">i</div>
+    success: <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>,
+    error: <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>,
+    warning: <Clock className="w-3 h-3 text-amber-600" />,
+    info: <div className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[8px] font-bold border border-blue-200">i</div>
   };
 
   return (
     <div
       onClick={onClick}
-      className={`p-4 rounded-2xl border transition-all cursor-pointer ${styles[type]}`}
+      className={`p-2.5 rounded-lg border transition-all cursor-pointer ${styles[type]}`}
+      style={{ fontSize: '12px' }}
     >
-      <div className="flex gap-4 items-start">
-        <div className="mt-1">{icons[type]}</div>
-        <div className="flex-1">
-          <h4 className="text-sm font-bold mb-1">{title}</h4>
-          <p className="text-xs opacity-80 mb-2 font-medium leading-relaxed">{desc}</p>
+      <div className="flex gap-2 items-start">
+        <div className="mt-0.5">{icons[type]}</div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold mb-0.5 truncate">{title}</h4>
+          <p className="opacity-80 mb-1 font-medium leading-snug line-clamp-2">{desc}</p>
           <span className="text-[10px] opacity-60 font-bold uppercase tracking-wider">{time}</span>
         </div>
       </div>

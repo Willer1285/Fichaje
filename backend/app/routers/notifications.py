@@ -162,12 +162,18 @@ def get_dashboard_alerts(db = Depends(get_db)):
 
                 # Si no tiene justificación, agregar alerta
                 if not tiene_justificacion:
+                    # Calcular hora esperada de entrada
+                    hora_esperada_str = "Hora desconocida"
+                    if emp.turno_id and emp.turno_id in turnos:
+                        turno = turnos[emp.turno_id]
+                        hora_esperada_str = turno.hora_inicio
+
                     alerts.append({
                         "id": f"absent_{emp.id}",
                         "type": "error",
                         "title": "Ausencia sin justificar",
                         "message": f"{emp.nombre} {emp.apellidos} no ha fichado hoy",
-                        "time": "Hace 2 horas",
+                        "time": hora_esperada_str,
                         "details": {
                             "empleado": f"{emp.nombre} {emp.apellidos}",
                             "empleado_id": emp.id,
@@ -208,10 +214,11 @@ def get_dashboard_alerts(db = Depends(get_db)):
                         }
                     })
 
-        # Ordenar por tiempo (más recientes primero)
-        # alerts.sort(key=lambda x: x['time'], reverse=True)
+        # Limitar a máximo 10 alertas (las más recientes)
+        # Ordenar por ID para obtener las más recientes
+        alerts_limitadas = alerts[:10] if len(alerts) > 10 else alerts
 
-        return alerts
+        return alerts_limitadas
 
     except Exception as e:
         print(f"Error fetching alerts: {e}")
