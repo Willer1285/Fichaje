@@ -325,12 +325,83 @@ def get_alert_details(alert_id: str, db = Depends(get_db)):
                     "turno_esperado": turno.nombre if turno else "Sin turno",
                     "hora_inicio_esperada": turno.hora_inicio if turno else "N/A",
                     "dias_pendientes": len(ausencias_pendientes),
-                    "ultimo_fichaje": "Información no disponible"  # Se puede mejorar agregando un método en db_manager
+                    "ultimo_fichaje": "Información no disponible"
                 },
                 "turno": {
                     "nombre": turno.nombre if turno else "Sin turno",
                     "hora_inicio": turno.hora_inicio if turno else "N/A",
                     "hora_fin": turno.hora_fin if turno else "N/A"
+                }
+            }
+
+        elif alert_type == "completed":
+            # Fichaje completado
+            fichaje = db.obtener_fichaje_por_id(entity_id)
+            if not fichaje:
+                raise HTTPException(status_code=404, detail="Fichaje no encontrado")
+
+            empleado = db.obtener_empleado(fichaje.empleado_id)
+            turno = db.obtener_turno(empleado.turno_id) if empleado.turno_id else None
+
+            return {
+                "id": alert_id,
+                "type": "success",
+                "title": "Fichaje Completado - Detalles Completos",
+                "empleado": {
+                    "id": empleado.id,
+                    "nombre": f"{empleado.nombre} {empleado.apellidos}",
+                    "dni": empleado.dni,
+                    "numero_empleado": empleado.numero_empleado,
+                    "email": empleado.email,
+                    "telefono": empleado.telefono,
+                    "cargo": empleado.cargo,
+                    "departamento": empleado.cargo or "N/A"
+                },
+                "fichaje": {
+                    "fecha": fichaje.fecha.strftime("%Y-%m-%d"),
+                    "hora_entrada": fichaje.hora_entrada.strftime("%I:%M %p") if fichaje.hora_entrada else "N/A",
+                    "hora_salida": fichaje.hora_salida.strftime("%I:%M %p") if fichaje.hora_salida else "N/A",
+                    "horas_trabajadas": round(fichaje.horas_trabajadas, 2) if fichaje.horas_trabajadas else 0,
+                    "tipo": fichaje.tipo_fichaje,
+                    "observaciones": fichaje.observaciones or "Sin observaciones"
+                },
+                "turno": {
+                    "nombre": turno.nombre if turno else "Sin turno",
+                    "hora_inicio": turno.hora_inicio if turno else "N/A",
+                    "hora_fin": turno.hora_fin if turno else "N/A"
+                }
+            }
+
+        elif alert_type == "request":
+            # Solicitud de vacaciones/cambio
+            solicitud = db.obtener_solicitud_por_id(entity_id)
+            if not solicitud:
+                raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+            empleado = db.obtener_empleado(solicitud.empleado_id)
+
+            return {
+                "id": alert_id,
+                "type": "info",
+                "title": "Solicitud de Cambio - Detalles Completos",
+                "empleado": {
+                    "id": empleado.id,
+                    "nombre": f"{empleado.nombre} {empleado.apellidos}",
+                    "dni": empleado.dni,
+                    "numero_empleado": empleado.numero_empleado,
+                    "email": empleado.email,
+                    "telefono": empleado.telefono,
+                    "cargo": empleado.cargo,
+                    "departamento": empleado.cargo or "N/A"
+                },
+                "solicitud": {
+                    "tipo": solicitud.tipo.replace("_", " ").title(),
+                    "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
+                    "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
+                    "dias_solicitados": solicitud.dias_solicitados,
+                    "estado": solicitud.estado,
+                    "motivo": solicitud.motivo_empleado or "Sin motivo especificado",
+                    "fecha_solicitud": solicitud.fecha_solicitud.strftime("%Y-%m-%d %I:%M %p") if solicitud.fecha_solicitud else "N/A"
                 }
             }
 

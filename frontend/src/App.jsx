@@ -128,6 +128,11 @@ function App() {
     }
   };
 
+  const handleDeleteAlert = (alertId) => {
+    // Eliminar la alerta del estado local
+    setDashboardAlerts(prev => prev.filter(alert => alert.id !== alertId));
+  };
+
   const exportRecentCheckins = async (format) => {
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -533,6 +538,45 @@ function App() {
                             </div>
                         )}
 
+                        {/* Detalles de Solicitud */}
+                        {alertDetails.solicitud && (
+                            <div className="bg-blue-50 p-6 rounded-2xl">
+                                <h4 className="text-sm font-bold text-blue-800 uppercase mb-4">Detalles de la Solicitud</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-blue-600">Tipo</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.solicitud.tipo}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-blue-600">Estado</p>
+                                        <p className="text-sm font-bold text-slate-800 capitalize">{alertDetails.solicitud.estado}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-blue-600">Fecha Inicio</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.solicitud.fecha_inicio}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-blue-600">Fecha Fin</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.solicitud.fecha_fin}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-blue-600">Días Solicitados</p>
+                                        <p className="text-lg font-bold text-blue-600">{alertDetails.solicitud.dias_solicitados}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-blue-600">Fecha Solicitud</p>
+                                        <p className="text-sm font-bold text-slate-800">{alertDetails.solicitud.fecha_solicitud}</p>
+                                    </div>
+                                </div>
+                                {alertDetails.solicitud.motivo && (
+                                    <div className="mt-4 pt-4 border-t border-blue-100">
+                                        <p className="text-xs text-blue-600 mb-1">Motivo</p>
+                                        <p className="text-sm text-slate-700">{alertDetails.solicitud.motivo}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Información del Turno */}
                         {alertDetails.turno && (
                             <div className="bg-blue-50 p-6 rounded-2xl">
@@ -704,11 +748,13 @@ function App() {
                         dashboardAlerts.map(alert => (
                             <NotificationItem
                                 key={alert.id}
+                                alertId={alert.id}
                                 title={alert.title}
                                 desc={alert.message}
                                 time={alert.time}
                                 type={alert.type}
                                 onClick={() => handleAlertClick(alert)}
+                                onDelete={handleDeleteAlert}
                             />
                         ))
                     )}
@@ -810,7 +856,7 @@ function TableRow({ name, id, dept, inTime, outTime, status }) {
   );
 }
 
-function NotificationItem({ title, desc, time, type, onClick }) {
+function NotificationItem({ title, desc, time, type, onClick, onDelete, alertId }) {
   const styles = {
     success: 'bg-green-50 text-green-900 border-green-100 hover:border-green-200 hover:shadow-sm',
     error: 'bg-red-50 text-red-900 border-red-100 hover:border-red-200 hover:shadow-sm',
@@ -819,19 +865,43 @@ function NotificationItem({ title, desc, time, type, onClick }) {
   };
 
   const icons = {
-    success: <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>,
-    error: <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>,
-    warning: <Clock className="w-3 h-3 text-amber-600" />,
-    info: <div className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[8px] font-bold border border-blue-200">i</div>
+    success: (
+      <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+    ),
+    error: (
+      <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white">
+        <span className="text-sm font-bold">!</span>
+      </div>
+    ),
+    warning: (
+      <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-white">
+        <Clock className="w-3.5 h-3.5" />
+      </div>
+    ),
+    info: (
+      <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white">
+        <span className="text-xs font-bold">i</span>
+      </div>
+    )
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(alertId);
+    }
   };
 
   return (
     <div
-      onClick={onClick}
-      className={`p-2.5 rounded-lg border transition-all cursor-pointer ${styles[type]}`}
+      className={`p-2.5 rounded-lg border transition-all cursor-pointer relative group ${styles[type]}`}
       style={{ fontSize: '12px' }}
     >
-      <div className="flex gap-2 items-start">
+      <div onClick={onClick} className="flex gap-2 items-start">
         <div className="mt-0.5">{icons[type]}</div>
         <div className="flex-1 min-w-0">
           <h4 className="font-bold mb-0.5 truncate">{title}</h4>
@@ -839,6 +909,15 @@ function NotificationItem({ title, desc, time, type, onClick }) {
           <span className="text-[10px] opacity-60 font-bold uppercase tracking-wider">{time}</span>
         </div>
       </div>
+      {onDelete && (
+        <button
+          onClick={handleDelete}
+          className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+          title="Eliminar alerta"
+        >
+          <X size={12} />
+        </button>
+      )}
     </div>
   );
 }
