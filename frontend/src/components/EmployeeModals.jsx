@@ -44,7 +44,7 @@ export function TypeSelectionModal({ onClose, onSelect }) {
   );
 }
 
-export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, config, catalogs }) {
+export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, config = {}, catalogs = { departments: [], locations: [], schedules: [] } }) {
     if (!isOpen) return null;
 
     const isEdit = !!employee;

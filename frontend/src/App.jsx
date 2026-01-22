@@ -239,9 +239,17 @@ function App() {
 
         <div className="p-4 border-t border-slate-700/50">
           <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold shadow-lg text-white text-sm">
-              {user.nombre?.charAt(0)}{user.apellidos?.charAt(0)}
-            </div>
+            {user.foto_path ? (
+              <img
+                src={`${API_URL.replace('/api', '')}${user.foto_path}`}
+                alt={`${user.nombre} ${user.apellidos}`}
+                className="w-10 h-10 rounded-full object-cover border-2 border-white/20 shadow-lg"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold shadow-lg text-white text-sm">
+                {user.nombre?.charAt(0)}{user.apellidos?.charAt(0)}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate group-hover:text-white transition-colors">{user.nombre}</p>
               <p className="text-xs text-slate-400 truncate">{user.es_superadmin ? 'Super Admin' : 'Admin'}</p>
@@ -753,14 +761,15 @@ function App() {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                           {recentCheckins.map((checkin) => (
-                            <TableRow 
+                            <TableRow
                               key={checkin.id}
-                              name={checkin.empleado_nombre} 
-                              id={`ID: ${checkin.empleado_id}`} 
-                              dept={checkin.departamento} 
-                              inTime={checkin.hora_entrada || "--:--"} 
-                              outTime={checkin.hora_salida || "--:--"} 
-                              status={checkin.estado} 
+                              name={checkin.empleado_nombre}
+                              employeeNumber={checkin.numero_empleado || checkin.empleado_id}
+                              photoPath={checkin.foto_path}
+                              dept={checkin.departamento}
+                              inTime={checkin.hora_entrada || "--:--"}
+                              outTime={checkin.hora_salida || "--:--"}
+                              status={checkin.estado}
                             />
                           ))}
                         </tbody>
@@ -854,7 +863,7 @@ function StatCard({ title, value, icon, color, trend, trendColor }) {
   );
 }
 
-function TableRow({ name, id, dept, inTime, outTime, status }) {
+function TableRow({ name, employeeNumber, photoPath, dept, inTime, outTime, status }) {
   const getStatusColor = (s) => {
       switch(s) {
           case 'A Tiempo': return 'bg-emerald-100 text-emerald-700';
@@ -869,12 +878,20 @@ function TableRow({ name, id, dept, inTime, outTime, status }) {
     <tr className="hover:bg-slate-50 transition-colors group cursor-default">
       <td className="py-5 pl-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg group-hover:bg-white group-hover:shadow-md transition-all group-hover:scale-110 group-hover:text-primary border-2 border-transparent group-hover:border-slate-100">
-            {name.charAt(0)}
-          </div>
+          {photoPath ? (
+            <img
+              src={`${API_URL.replace('/api', '')}${photoPath}`}
+              alt={name}
+              className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 group-hover:border-primary group-hover:scale-110 transition-all shadow-sm"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg group-hover:shadow-md transition-all group-hover:scale-110 border-2 border-transparent group-hover:border-slate-100">
+              {name.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
+            </div>
+          )}
           <div>
             <p className="font-bold text-slate-800 text-sm">{name}</p>
-            <p className="text-xs text-slate-400 font-medium">{id}</p>
+            <p className="text-xs text-slate-400 font-medium">N°: {employeeNumber}</p>
           </div>
         </div>
       </td>

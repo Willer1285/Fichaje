@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, Building, Lock, Clock, MapPin, Briefcase, Plus, Trash2, Edit2, X, Upload } from 'lucide-react';
 import axios from 'axios';
+import { Toast, ConfirmDialog } from '../components/Toast';
 
 const API_URL = "/api";
 
@@ -79,7 +80,7 @@ function CompanySettings() {
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
   const [iconFile, setIconFile] = useState(null);
-  const [msg, setMsg] = useState({ text: '', type: '' });
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchConfig();
@@ -97,7 +98,7 @@ function CompanySettings() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMsg({ text: '', type: '' });
+    setToast(null);
 
     const formData = new FormData();
     Object.keys(config).forEach(key => {
@@ -106,7 +107,7 @@ function CompanySettings() {
             formData.append(key, (val === null || val === undefined) ? "" : val);
         }
     });
-    
+
     if (logoFile) formData.append('logo', logoFile);
     if (iconFile) formData.append('icono', iconFile);
 
@@ -114,10 +115,12 @@ function CompanySettings() {
       await axios.put(`${API_URL}/config`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setMsg({ text: 'Configuración guardada correctamente', type: 'success' });
+      setToast({ message: 'Configuración guardada correctamente', type: 'success' });
+      setLogoFile(null);
+      setIconFile(null);
       fetchConfig(); // Recargar para ver rutas de imagenes actualizadas
     } catch (err) {
-      setMsg({ text: 'Error al guardar la configuración', type: 'error' });
+      setToast({ message: 'Error al guardar la configuración', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -229,11 +232,6 @@ function CompanySettings() {
             </div>
         </div>
 
-        {msg.text && (
-          <div className={`p-4 rounded-xl text-sm font-medium ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-            {msg.text}
-          </div>
-        )}
 
         <div className="flex justify-end pt-4">
           <button type="submit" disabled={loading} className="btn-primary">
@@ -319,14 +317,18 @@ function SecuritySettings() {
                     <span className="text-sm font-medium text-slate-700">Permitir fichar con retraso (si no, bloquea)</span>
                 </div>
 
-                {msg.text && (
-                    <div className={`p-3 rounded-lg text-sm ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                        {msg.text}
-                    </div>
-                )}
-
-                <button type="submit" disabled={loading} className="btn-primary mt-4">Guardar Cambios</button>
+                <button type="submit" disabled={loading} className="btn-primary mt-4">
+                  {loading ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
             </form>
+
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
         </div>
     )
 }
@@ -337,6 +339,8 @@ function GenericCatalogManager({ title, endpoint, itemName, icon }) {
     const [newItem, setNewItem] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
+    const [toast, setToast] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState(null);
 
     useEffect(() => {
         loadItems();
@@ -361,19 +365,28 @@ function GenericCatalogManager({ title, endpoint, itemName, icon }) {
             await axios.post(`${API_URL}/${endpoint}`, { nombre: newItem, activo: true });
             setNewItem('');
             loadItems();
+            setToast({ message: `${itemName} creado correctamente`, type: 'success' });
         } catch (err) {
-            alert('Error al crear');
+            setToast({ message: `Error al crear ${itemName}`, type: 'error' });
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('¿Seguro que deseas eliminar este elemento?')) return;
-        try {
-            await axios.delete(`${API_URL}/${endpoint}/${id}`);
-            loadItems();
-        } catch (err) {
-            alert('Error al eliminar');
-        }
+        setConfirmDialog({
+            title: 'Confirmar eliminación',
+            message: `¿Estás seguro de que deseas eliminar este ${itemName}?`,
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`${API_URL}/${endpoint}/${id}`);
+                    loadItems();
+                    setToast({ message: `${itemName} eliminado correctamente`, type: 'success' });
+                } catch (err) {
+                    setToast({ message: `Error al eliminar ${itemName}`, type: 'error' });
+                }
+                setConfirmDialog(null);
+            },
+            onCancel: () => setConfirmDialog(null)
+        });
     };
 
     const startEdit = (item) => {
@@ -386,8 +399,9 @@ function GenericCatalogManager({ title, endpoint, itemName, icon }) {
             await axios.put(`${API_URL}/${endpoint}/${editingId}`, { nombre: editValue, activo: true });
             setEditingId(null);
             loadItems();
+            setToast({ message: `${itemName} actualizado correctamente`, type: 'success' });
         } catch (err) {
-            alert('Error al actualizar');
+            setToast({ message: `Error al actualizar ${itemName}`, type: 'error' });
         }
     };
 
@@ -451,6 +465,26 @@ function GenericCatalogManager({ title, endpoint, itemName, icon }) {
                     </div>
                 )}
             </div>
+
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={confirmDialog.onCancel}
+                    type="danger"
+                    confirmText="Eliminar"
+                    cancelText="Cancelar"
+                />
+            )}
         </div>
     );
 }
@@ -460,6 +494,8 @@ function SchedulesManager() {
     const [loading, setLoading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentSchedule, setCurrentSchedule] = useState({ nombre: '', dias_semana: [], hora_inicio: '09:00', hora_fin: '17:00' });
+    const [toast, setToast] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState(null);
 
     const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -484,13 +520,17 @@ function SchedulesManager() {
         try {
             if (currentSchedule.id) {
                 await axios.put(`${API_URL}/schedules/${currentSchedule.id}`, data);
+                setToast({ message: 'Horario actualizado correctamente', type: 'success' });
             } else {
                 await axios.post(`${API_URL}/schedules`, data);
+                setToast({ message: 'Horario creado correctamente', type: 'success' });
             }
             setIsEditing(false);
             loadSchedules();
             setCurrentSchedule({ nombre: '', dias_semana: [], hora_inicio: '09:00', hora_fin: '17:00' });
-        } catch (err) { alert('Error al guardar'); }
+        } catch (err) {
+            setToast({ message: 'Error al guardar horario', type: 'error' });
+        }
     };
 
     const toggleDay = (day) => {
@@ -511,8 +551,21 @@ function SchedulesManager() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('¿Eliminar horario?')) return;
-        try { await axios.delete(`${API_URL}/schedules/${id}`); loadSchedules(); } catch(err) { alert('Error'); }
+        setConfirmDialog({
+            title: 'Confirmar eliminación',
+            message: '¿Estás seguro de que deseas eliminar este horario?',
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`${API_URL}/schedules/${id}`);
+                    loadSchedules();
+                    setToast({ message: 'Horario eliminado correctamente', type: 'success' });
+                } catch (err) {
+                    setToast({ message: 'Error al eliminar horario', type: 'error' });
+                }
+                setConfirmDialog(null);
+            },
+            onCancel: () => setConfirmDialog(null)
+        });
     };
 
     return (
@@ -598,6 +651,26 @@ function SchedulesManager() {
                     </div>
                 ))}
             </div>
+
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={confirmDialog.onCancel}
+                    type="danger"
+                    confirmText="Eliminar"
+                    cancelText="Cancelar"
+                />
+            )}
         </div>
     )
 }

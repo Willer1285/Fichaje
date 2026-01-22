@@ -391,6 +391,8 @@ def get_today_attendance(db = Depends(get_db)):
                 resultado.append({
                     "id": fichaje_id or f"emp_{emp.id}",
                     "empleado_id": emp.id,
+                    "numero_empleado": emp.numero_empleado,
+                    "foto_path": emp.foto_path or None,
                     "empleado_nombre": f"{emp.nombre} {emp.apellidos}",
                     "departamento": deptos.get(emp.departamento_id, emp.cargo or "-"),
                     "hora_entrada": hora_entrada or "--:--",
