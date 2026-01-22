@@ -340,8 +340,11 @@ def get_today_attendance(db = Depends(get_db)):
             hora_entrada = None
             hora_salida = None
             fichaje_id = None
-            
+            mostrar_registro = False
+
             if fichaje_data:
+                # Si hay fichaje, mostrar siempre
+                mostrar_registro = True
                 fichaje, _ = fichaje_data
                 fichaje_id = fichaje.id
                 hora_entrada = fichaje.hora_entrada.strftime("%I:%M %p") if fichaje.hora_entrada else None
@@ -350,30 +353,50 @@ def get_today_attendance(db = Depends(get_db)):
                 if fichaje.hora_salida:
                     estado = "Completo"
                 else:
-                    # Determinar si es Tarde o A Tiempo
                     estado = "A Tiempo"
                     if fichaje.hora_entrada:
                         if emp.turno_id and emp.turno_id in turnos:
                             turno = turnos[emp.turno_id]
                             try:
                                 h, m = map(int, turno.hora_inicio.split(":"))
-                                # Usar la fecha del fichaje
                                 expected = fichaje.hora_entrada.replace(hour=h, minute=m, second=0)
                                 limit = expected + timedelta(minutes=config.tiempo_tolerancia_minutos)
                                 if fichaje.hora_entrada > limit:
                                     estado = "Tarde"
                             except:
                                 pass
-            
-            resultado.append({
-                "id": fichaje_id or f"emp_{emp.id}", # ID único para key
-                "empleado_id": emp.id,
-                "empleado_nombre": f"{emp.nombre} {emp.apellidos}",
-                "departamento": deptos.get(emp.departamento_id, emp.cargo or "-"),
-                "hora_entrada": hora_entrada or "--:--",
-                "hora_salida": hora_salida or "--:--",
-                "estado": estado
-            })
+            else:
+                # Si no hay fichaje, verificar si corresponde mostrar Ausente (después de 2h)
+                hora_inicio_ref = hoy.replace(hour=9, minute=0, second=0) # Default
+                
+                if emp.turno_id and emp.turno_id in turnos:
+                    turno = turnos[emp.turno_id]
+                    try:
+                        h, m = map(int, turno.hora_inicio.split(":"))
+                        hora_inicio_ref = hoy.replace(hour=h, minute=m, second=0)
+                    except:
+                        pass
+                
+                # Regla: Solo mostrar si han pasado 2 horas del inicio
+                limite_ausencia = hora_inicio_ref + timedelta(hours=2)
+                
+                if hoy > limite_ausencia:
+                    estado = "Ausente"
+                    mostrar_registro = True
+                else:
+                    # Aún es temprano, no mostrar nada
+                    mostrar_registro = False
+
+            if mostrar_registro:
+                resultado.append({
+                    "id": fichaje_id or f"emp_{emp.id}",
+                    "empleado_id": emp.id,
+                    "empleado_nombre": f"{emp.nombre} {emp.apellidos}",
+                    "departamento": deptos.get(emp.departamento_id, emp.cargo or "-"),
+                    "hora_entrada": hora_entrada or "--:--",
+                    "hora_salida": hora_salida or "--:--",
+                    "estado": estado
+                })
             
         return resultado
         
@@ -487,8 +510,6 @@ def get_dashboard_stats(period: str = "day", db = Depends(get_db)):
                     retrasos += 1
             
             # Cálculo de Ausencias
-            # Lógica: Empleados activos * Días laborables - Fichajes únicos por día
-            # (Simplificado)
             ausencias = 0
             
             # Iterar cada día del rango
@@ -501,9 +522,33 @@ def get_dashboard_stats(period: str = "day", db = Depends(get_db)):
                 fichajes_dia = [f for f, e in fichajes if f.fecha.date() == dia_check]
                 ids_presentes = set(f.empleado_id for f in fichajes_dia)
                 
-                # Contar ausentes
-                ausentes_dia = [e for e in empleados_activos if e.id not in ids_presentes]
-                ausencias += len(ausentes_dia)
+                # Obtener candidatos a ausentes (los que no ficharon)
+                candidatos_ausentes = [e for e in empleados_activos if e.id not in ids_presentes]
+                
+                # Validar cada candidato
+                for emp in candidatos_ausentes:
+                    es_ausencia = True
+                    
+                    # Si el día evaluado es HOY, aplicar regla de 2 horas
+                    if dia_check == datetime.now().date():
+                        hora_inicio_ref = datetime.now().replace(hour=9, minute=0, second=0) # Default
+                        
+                        if emp.turno_id and emp.turno_id in turnos:
+                            turno = turnos[emp.turno_id]
+                            try:
+                                h, m = map(int, turno.hora_inicio.split(":"))
+                                hora_inicio_ref = datetime.now().replace(hour=h, minute=m, second=0)
+                            except:
+                                pass
+                        
+                        limite_ausencia = hora_inicio_ref + timedelta(hours=2)
+                        
+                        # Si aún estamos dentro del tiempo de espera, no contar como ausencia
+                        if datetime.now() <= limite_ausencia:
+                            es_ausencia = False
+                    
+                    if es_ausencia:
+                        ausencias += 1
 
             return total_fichajes, retrasos, ausencias
 
@@ -513,6 +558,7 @@ def get_dashboard_stats(period: str = "day", db = Depends(get_db)):
         
         # Calcular variaciones porcentuales
         def calc_trend(actual, anterior):
+            if actual == 0: return "0%"
             if anterior == 0: return "+100%" if actual > 0 else "0%"
             diff = ((actual - anterior) / anterior) * 100
             sign = "+" if diff > 0 else "-" if diff < 0 else ""

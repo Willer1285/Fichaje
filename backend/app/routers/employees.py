@@ -37,7 +37,7 @@ class EmployeeResponse(BaseModel):
     fecha_egreso: Optional[str] = None
     motivo_egreso: str = ""
 
-@router.get("/", response_model=List[EmployeeResponse])
+@router.get("", response_model=List[EmployeeResponse])
 def read_employees(db = Depends(get_db)):
     """Obtiene la lista de todos los empleados"""
     try:
@@ -101,7 +101,7 @@ def read_employee(employee_id: int, db = Depends(get_db)):
         "motivo_egreso": e.motivo_egreso or ""
     }
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_employee(
     nombre: str = Form(...),
     apellidos: str = Form(...),

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, X } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());

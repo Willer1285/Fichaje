@@ -55,12 +55,13 @@ def generate_report(data: ReportRequest, db = Depends(get_db)):
                 generator.generar_excel_empleado(emp, fichajes, start, end, filepath)
                 
         else:
-            # Todos los empleados (Solo Excel)
-            if data.format == "pdf":
-                 raise HTTPException(status_code=400, detail="Informe general solo disponible en Excel")
-                 
+            # Todos los empleados
             fichajes = db.obtener_todos_fichajes_periodo(start, end)
-            generator.generar_excel_todos(fichajes, start, end, filepath)
+            
+            if data.format == "pdf":
+                 generator.generar_pdf_todos(fichajes, start, end, filepath)
+            else:
+                 generator.generar_excel_todos(fichajes, start, end, filepath)
             
         return FileResponse(filepath, filename=filename, media_type='application/octet-stream')
 

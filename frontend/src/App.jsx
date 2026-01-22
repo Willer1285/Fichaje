@@ -10,8 +10,9 @@ import Reports from './pages/Reports';
 import Config from './pages/Config';
 import CalendarPage from './pages/Calendar';
 import { TypeSelectionModal, EmployeeFormModal } from './components/EmployeeModals';
+import ErrorBoundary from './components/ErrorBoundary';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -158,9 +159,25 @@ function App() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+
+      alert(`Fichajes ${format.toUpperCase()} exportados exitosamente.`);
+
     } catch (error) {
       console.error('Error exportando fichajes:', error);
-      alert('Error al exportar fichajes. Por favor intente de nuevo.');
+      
+      let errorMessage = 'Error al exportar fichajes.';
+      
+      if (error.response && error.response.data instanceof Blob) {
+           try {
+               const text = await error.response.data.text();
+               const json = JSON.parse(text);
+               errorMessage += " " + (json.detail || json.message || "");
+           } catch (e) { }
+      } else if (error.response?.data?.detail) {
+           errorMessage += " " + error.response.data.detail;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -614,6 +631,7 @@ function App() {
 
         {/* Dynamic Content */}
         <div className="flex-1 overflow-auto p-8 custom-scrollbar">
+          <ErrorBoundary>
           {activeTab === 'dashboard' && (
             <>
               {/* Filter Tabs */}
@@ -777,7 +795,7 @@ function App() {
           {activeTab === 'requests' && <Requests />}
           {activeTab === 'reports' && <Reports />}
           {activeTab === 'config' && <Config />}
-          
+          </ErrorBoundary>
         </div>
       </main>
     </div>

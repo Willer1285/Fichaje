@@ -47,15 +47,45 @@ def get_dashboard_alerts(db = Depends(get_db)):
 
         alerts = []
 
-        # Obtener todos los fichajes de HOY (excluyendo administradores)
+        # Obtener todos los fichajes de HOY
         fichajes_hoy = db.obtener_todos_fichajes_periodo(inicio_dia, fin_dia)
         turnos = {t.id: t for t in db.listar_turnos()}
         config = db.obtener_configuracion()
+        todos_empleados = db.listar_empleados(incluir_inactivos=False)
+
+        # 0. NUEVOS EMPLEADOS
+        for emp in todos_empleados:
+            if emp.fecha_alta and emp.fecha_alta.date() == hoy.date():
+                alerts.append({
+                    "id": f"new_emp_{emp.id}",
+                    "type": "info",
+                    "title": "Nuevo Empleado",
+                    "message": f"Se ha registrado a {emp.nombre} {emp.apellidos}",
+                    "time": emp.fecha_alta.strftime("%I:%M %p"),
+                    "details": None
+                })
+
+        # 0.5 CAMBIOS EN EL SISTEMA (Modificaciones)
+        try:
+            modificaciones = db.obtener_modificaciones_recientes(hoy)
+            for mod in modificaciones:
+                campo = mod.get('campo_modificado', 'datos')
+                nombre = f"{mod.get('nombre', '')} {mod.get('apellidos', '')}"
+                alerts.append({
+                    "id": f"mod_{mod.get('id')}",
+                    "type": "info",
+                    "title": "Cambio en Sistema",
+                    "message": f"Cambio de {campo} en {nombre}",
+                    "time": "Hoy",
+                    "details": None
+                })
+        except Exception:
+            pass # Si falla el historial, continuar
 
         # 1. FICHAJES COMPLETADOS (tipo success/verde)
         # 2. LLEGADAS TARDE (tipo warning/amarillo)
         for fichaje, empleado in fichajes_hoy:
-            # EXCLUIR ADMINISTRADORES
+            # Excluir administradores de alertas de fichaje
             if empleado.es_admin or empleado.es_superadmin:
                 continue
 
@@ -130,11 +160,10 @@ def get_dashboard_alerts(db = Depends(get_db)):
                     pass
 
         # 3. AUSENCIAS SIN JUSTIFICAR (tipo error/rojo)
-        empleados_activos = db.listar_empleados(incluir_inactivos=False)
         empleados_con_fichaje = set(f.empleado_id for f, _ in fichajes_hoy)
 
-        for emp in empleados_activos:
-            # EXCLUIR ADMINISTRADORES
+        for emp in todos_empleados:
+            # Excluir administradores de alertas de ausencia
             if emp.es_admin or emp.es_superadmin:
                 continue
 
@@ -164,49 +193,66 @@ def get_dashboard_alerts(db = Depends(get_db)):
                 if not tiene_justificacion:
                     # Calcular hora esperada de entrada
                     hora_esperada_str = "Hora desconocida"
+                    mostrar_alerta = True
+
                     if emp.turno_id and emp.turno_id in turnos:
                         turno = turnos[emp.turno_id]
                         hora_esperada_str = turno.hora_inicio
+                        
+                        try:
+                            # Validar tolerancia de 2 horas para marcar ausencia
+                            h, m = map(int, turno.hora_inicio.split(":"))
+                            hora_inicio_turno = hoy.replace(hour=h, minute=m, second=0, microsecond=0)
+                            
+                            # Si el turno es más tarde en el día
+                            if hoy < hora_inicio_turno:
+                                mostrar_alerta = False
+                            else:
+                                # Han pasado menos de 2 horas (7200 segundos)
+                                diferencia = (hoy - hora_inicio_turno).total_seconds()
+                                if diferencia < 7200: 
+                                    mostrar_alerta = False
+                        except:
+                            pass
 
-                    alerts.append({
-                        "id": f"absent_{emp.id}",
-                        "type": "error",
-                        "title": "Ausencia sin justificar",
-                        "message": f"{emp.nombre} {emp.apellidos} no ha fichado hoy",
-                        "time": hora_esperada_str,
-                        "details": {
-                            "empleado": f"{emp.nombre} {emp.apellidos}",
-                            "empleado_id": emp.id,
-                            "dni": emp.dni,
-                            "departamento": emp.cargo or "N/A",
-                            "fecha": hoy.strftime("%Y-%m-%d"),
-                            "turno": turnos[emp.turno_id].nombre if emp.turno_id and emp.turno_id in turnos else "Sin turno asignado"
-                        }
-                    })
+                    if mostrar_alerta:
+                        alerts.append({
+                            "id": f"absent_{emp.id}",
+                            "type": "error",
+                            "title": "Ausencia sin justificar",
+                            "message": f"{emp.nombre} {emp.apellidos} no ha fichado hoy",
+                            "time": hora_esperada_str,
+                            "details": {
+                                "empleado": f"{emp.nombre} {emp.apellidos}",
+                                "empleado_id": emp.id,
+                                "dni": emp.dni,
+                                "departamento": emp.cargo or "N/A",
+                                "fecha": hoy.strftime("%Y-%m-%d"),
+                                "turno": turnos[emp.turno_id].nombre if emp.turno_id and emp.turno_id in turnos else "Sin turno asignado"
+                            }
+                        })
 
-        # 4. SOLICITUDES DE VACACIONES DEL DÍA (tipo info/azul)
-        todos_empleados = db.listar_empleados(incluir_inactivos=False)
+        # 4. SOLICITUDES (Vacaciones, Permisos, etc)
         for emp in todos_empleados:
-            # EXCLUIR ADMINISTRADORES
-            if emp.es_admin or emp.es_superadmin:
-                continue
-
             solicitudes = db.obtener_solicitudes_empleado(emp.id, incluir_historial=True)
             for solicitud in solicitudes:
-                # Solo mostrar solicitudes creadas hoy
-                if solicitud.fecha_solicitud and solicitud.fecha_solicitud.date() == hoy.date():
-                    tipo_emoji = "🏖️" if solicitud.tipo == "vacaciones_anuales" else "📅"
+                # Mostrar solicitudes pendientes o modificadas hoy
+                es_pendiente = solicitud.estado == 'pendiente'
+                es_de_hoy = solicitud.fecha_solicitud and solicitud.fecha_solicitud.date() == hoy.date()
+                
+                if es_pendiente or es_de_hoy:
+                    tipo_str = solicitud.tipo.replace("_", " ").title()
                     estado_text = "pendiente" if solicitud.estado == "pendiente" else solicitud.estado
 
                     alerts.append({
                         "id": f"request_{solicitud.id}",
                         "type": "info",
-                        "title": "Solicitud de cambio",
-                        "message": f"{emp.nombre} {emp.apellidos} solicitó cambio de horario",
+                        "title": f"Solicitud: {tipo_str}",
+                        "message": f"{emp.nombre} {emp.apellidos} - {estado_text}",
                         "time": solicitud.fecha_solicitud.strftime("%I:%M %p") if solicitud.fecha_solicitud else "Hoy",
                         "details": {
                             "empleado": f"{emp.nombre} {emp.apellidos}",
-                            "tipo": solicitud.tipo.replace("_", " ").title(),
+                            "tipo": tipo_str,
                             "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
                             "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
                             "dias": solicitud.dias_solicitados,
@@ -214,9 +260,9 @@ def get_dashboard_alerts(db = Depends(get_db)):
                         }
                     })
 
-        # Limitar a máximo 10 alertas (las más recientes)
-        # Ordenar por ID para obtener las más recientes
-        alerts_limitadas = alerts[:10] if len(alerts) > 10 else alerts
+        # Limitar a máximo 20 alertas
+        alerts.sort(key=lambda x: x.get('time', ''), reverse=True) # Ordenar por hora (simple string sort, podría mejorarse)
+        alerts_limitadas = alerts[:20]
 
         return alerts_limitadas
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Lock, ArrowRight, QrCode, ArrowLeft, Shield, Clock, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function Login({ onLogin }) {
   const [view, setView] = useState('selection'); // 'selection', 'admin', 'employee'

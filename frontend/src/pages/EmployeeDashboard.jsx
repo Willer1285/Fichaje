@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Clock, LogOut, Coffee, ArrowRight, AlertTriangle, CheckCircle, Calendar, Briefcase, Lock, Bell, X } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function EmployeeDashboard({ user, onLogout }) {
   const [status, setStatus] = useState('loading'); // loading, not_working, working, on_break, completed, working_overtime

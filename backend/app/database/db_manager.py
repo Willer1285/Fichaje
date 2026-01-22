@@ -818,6 +818,23 @@ class DatabaseManager:
             ))
             return cursor.lastrowid
 
+    def obtener_modificaciones_recientes(self, fecha: datetime) -> List[dict]:
+        """Obtiene modificaciones realizadas en una fecha específica"""
+        fecha_str = fecha.strftime("%Y-%m-%d")
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT h.*, e.nombre, e.apellidos 
+                FROM historial_modificaciones h
+                JOIN empleados e ON h.empleado_id = e.id
+                WHERE date(h.fecha_modificacion) = date(?)
+            """, (fecha_str,))
+            
+            resultados = []
+            for row in cursor.fetchall():
+                resultados.append(dict(row))
+            return resultados
+
     # ==================== UTILIDADES ====================
 
     def _row_to_employee(self, row) -> Employee:

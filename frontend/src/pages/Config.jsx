@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Save, Building, Lock, Clock, MapPin, Briefcase, Plus, Trash2, Edit2, X, Upload } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function Config() {
   const [activeTab, setActiveTab] = useState('company');
@@ -176,20 +176,7 @@ function CompanySettings() {
           {/* Configuración Regional */}
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Configuración Regional</h3>
-            <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700">Zona Horaria</label>
-                  <select value={config.zona_horaria || 'Europe/Madrid'} onChange={e => setConfig({...config, zona_horaria: e.target.value})} className="input-field">
-                      <option value="Europe/Madrid">España (Madrid)</option>
-                      <option value="America/Caracas">Venezuela (Caracas)</option>
-                      <option value="America/Bogota">Colombia (Bogotá)</option>
-                      <option value="America/Mexico_City">México (CDMX)</option>
-                      <option value="America/Argentina/Buenos_Aires">Argentina (Buenos Aires)</option>
-                      <option value="America/Santiago">Chile (Santiago)</option>
-                      <option value="America/Lima">Perú (Lima)</option>
-                      <option value="UTC">UTC</option>
-                  </select>
-               </div>
+            <div className="grid grid-cols-1 gap-4">
                <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">Moneda</label>
                   <select value={config.moneda || 'EUR'} onChange={e => setConfig({...config, moneda: e.target.value})} className="input-field">

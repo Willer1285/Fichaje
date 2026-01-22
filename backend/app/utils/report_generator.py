@@ -569,6 +569,87 @@ class ReportGenerator:
         return filename
 
     @staticmethod
+    def generar_pdf_todos(fichajes_empleados: List[Tuple[Fichaje, Employee]],
+                          fecha_inicio: datetime, fecha_fin: datetime,
+                          filename: str) -> str:
+        """Genera un PDF con todos los fichajes del periodo (Lista plana)"""
+        doc = SimpleDocTemplate(filename, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Título
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            textColor=colors.HexColor('#1976D2'),
+            spaceAfter=20,
+            alignment=1  # Center
+        )
+
+        title = Paragraph(
+            f"REGISTRO DE JORNADA - TODOS LOS EMPLEADOS<br/>{fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}",
+            title_style
+        )
+        elements.append(title)
+        elements.append(Spacer(1, 0.5 * cm))
+
+        # Tabla de datos
+        data = [["Fecha", "Empleado", "DNI", "Entrada", "Salida", "Horas"]]
+
+        for fichaje, empleado in fichajes_empleados:
+            data.append([
+                fichaje.fecha.strftime('%d/%m/%Y') if fichaje.fecha else "",
+                f"{empleado.apellidos}, {empleado.nombre}"[:30], # Truncar si es muy largo
+                empleado.dni,
+                fichaje.hora_entrada.strftime('%H:%M') if fichaje.hora_entrada else "-",
+                fichaje.hora_salida.strftime('%H:%M') if fichaje.hora_salida else "-",
+                f"{fichaje.horas_trabajadas:.2f}h"
+            ])
+
+        # Si no hay datos, añadir fila vacía o mensaje
+        if len(data) == 1:
+            data.append(["No hay registros", "", "", "", "", ""])
+
+        # Estilo de tabla
+        table = Table(data, colWidths=[2.5*cm, 7*cm, 2.5*cm, 2*cm, 2*cm, 2*cm])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1976D2')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'), # Alinear nombres a la izquierda
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#E3F2FD')]),
+        ]))
+
+        elements.append(table)
+
+        # Pie de página
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            alignment=1,
+            spaceBefore=20
+        )
+        
+        elements.append(Spacer(1, 1 * cm))
+        footer = Paragraph(
+            f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            footer_style
+        )
+        elements.append(footer)
+
+        doc.build(elements)
+        return filename
+
+    @staticmethod
     def generar_excel_todos(fichajes_empleados: List[Tuple[Fichaje, Employee]],
                            fecha_inicio: datetime, fecha_fin: datetime,
                            filename: str) -> str:

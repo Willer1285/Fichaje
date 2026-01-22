@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar as CalendarIcon, Download, Filter } from 'lucide-react';
+import { SuccessModal } from '../components/SuccessModal';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function Attendance() {
   const [history, setHistory] = useState([]);
@@ -11,6 +12,10 @@ function Attendance() {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  
+  // Modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     fetchEmployees();
@@ -20,9 +25,16 @@ function Attendance() {
   const fetchEmployees = async () => {
     try {
       const res = await axios.get(`${API_URL}/employees`);
-      setEmployees(res.data);
+      // Validar que sea un array antes de asignar
+      if (Array.isArray(res.data)) {
+        setEmployees(res.data);
+      } else {
+        console.error("Error: La respuesta de empleados no es un array", res.data);
+        setEmployees([]);
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Error cargando empleados:", error);
+      setEmployees([]);
     }
   };
 
@@ -34,26 +46,94 @@ function Attendance() {
         url += `&employee_id=${selectedEmployee}`;
       }
       const res = await axios.get(url);
-      setHistory(res.data);
+      // Validar que sea un array antes de asignar
+      if (Array.isArray(res.data)) {
+        setHistory(res.data);
+      } else {
+        console.error("Error: La respuesta del historial no es un array", res.data);
+        setHistory([]);
+      }
     } catch (error) {
       console.error("Error fetching history:", error);
+      setHistory([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const exportToCSV = () => {
-      const csvContent = "data:text/csv;charset=utf-8," 
-          + "Fecha,Empleado,DNI,Entrada,Salida,Horas,Estado\n"
-          + history.map(row => `${row.fecha},${row.empleado_nombre},${row.dni},${row.hora_entrada},${row.hora_salida},${row.horas_trabajadas},${row.estado}`).join("\n");
-      
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `historial_fichajes_${startDate}_${endDate}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const exportData = async (format) => {
+    try {
+        setLoading(true);
+        // Construir filtros
+        const payload = {
+            type: selectedEmployee ? 'individual' : 'todos',
+            start_date: startDate,
+            end_date: endDate,
+            format: format
+        };
+        if (selectedEmployee) payload.employee_id = parseInt(selectedEmployee);
+
+        const response = await axios.post(`${API_URL}/reports/generate`, payload, {
+            responseType: 'blob'
+        });
+
+        const filename = `reporte_asistencia_${startDate}_${endDate}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+        const blob = new Blob([response.data]);
+
+        // Convertir blob a base64 para enviar a pywebview si existe
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = async () => {
+            const base64data = reader.result;
+            
+            // Verificar si existe API pywebview (Desktop App)
+            if (window.pywebview && window.pywebview.api) {
+                try {
+                    const res = await window.pywebview.api.save_file(filename, base64data);
+                    if (res.success) {
+                        setSuccessMessage(`Archivo guardado exitosamente en:\n${res.path}`);
+                        setShowSuccessModal(true);
+                    } else {
+                        alert("Error guardando archivo: " + res.error);
+                    }
+                } catch (e) {
+                    alert("Error comunicando con la aplicación de escritorio: " + e);
+                }
+            } else {
+                // Fallback web browser standard
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', filename);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+
+                setSuccessMessage(`Reporte ${format.toUpperCase()} exportado exitosamente.`);
+                setShowSuccessModal(true);
+            }
+            setLoading(false);
+        };
+
+    } catch (error) {
+        console.error("Error exportando:", error);
+        setLoading(false);
+        
+        let errorMessage = "Error al exportar datos.";
+        
+        if (error.response && error.response.data instanceof Blob) {
+             try {
+                 const text = await error.response.data.text();
+                 const json = JSON.parse(text);
+                 errorMessage += " " + (json.detail || json.message || "");
+             } catch (e) {}
+        } else if (error.response?.data?.detail) {
+             errorMessage += " " + error.response.data.detail;
+        }
+        
+        alert(errorMessage);
+    }
   };
 
   return (
@@ -88,7 +168,7 @@ function Attendance() {
             onChange={(e) => setSelectedEmployee(e.target.value)}
           >
             <option value="">Todos los empleados</option>
-            {employees.map(emp => (
+            {Array.isArray(employees) && employees.map(emp => (
               <option key={emp.id} value={emp.id}>{emp.nombre} {emp.apellidos}</option>
             ))}
           </select>
@@ -99,12 +179,22 @@ function Attendance() {
         >
           <Filter size={18} /> Filtrar
         </button>
-        <button 
-          onClick={exportToCSV}
-          className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2"
-        >
-          <Download size={18} /> Exportar
-        </button>
+        <div className="flex gap-2">
+            <button 
+              onClick={() => exportData('excel')}
+              disabled={loading}
+              className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download size={18} /> Excel
+            </button>
+            <button 
+              onClick={() => exportData('pdf')}
+              disabled={loading}
+              className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download size={18} /> PDF
+            </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -122,14 +212,14 @@ function Attendance() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {history.length === 0 ? (
+            {(!history || history.length === 0) ? (
               <tr>
                 <td colSpan="7" className="px-6 py-8 text-center text-slate-400">
                   No se encontraron registros para los filtros seleccionados.
                 </td>
               </tr>
             ) : (
-              history.map((record) => (
+              Array.isArray(history) && history.map((record) => (
                 <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-slate-800">{record.fecha}</td>
                   <td className="px-6 py-4 font-bold text-slate-800">{record.empleado_nombre}</td>
@@ -153,6 +243,13 @@ function Attendance() {
           </tbody>
         </table>
       </div>
+
+      <SuccessModal 
+        isOpen={showSuccessModal} 
+        onClose={() => setShowSuccessModal(false)} 
+        message={successMessage}
+        title="Exportación Exitosa"
+      />
 
       <style>{`
         .input-field {

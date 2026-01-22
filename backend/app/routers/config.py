@@ -52,7 +52,6 @@ def get_config(db = Depends(get_db)):
             "permitir_llegadas_tarde": config.permitir_llegadas_tarde,
             "tiempo_tolerancia_horas": config.tiempo_tolerancia_horas,
             "tiempo_tolerancia_minutos": config.tiempo_tolerancia_minutos,
-            "zona_horaria": config.zona_horaria,
             "moneda": config.moneda
         }
     except Exception as e:
@@ -74,7 +73,6 @@ def update_config(
     permitir_llegadas_tarde: Optional[bool] = Form(None),
     tiempo_tolerancia_horas: Optional[int] = Form(None),
     tiempo_tolerancia_minutos: Optional[int] = Form(None),
-    zona_horaria: Optional[str] = Form(None),
     moneda: Optional[str] = Form(None),
     logo: UploadFile = File(None),
     icono: UploadFile = File(None),
@@ -101,7 +99,6 @@ def update_config(
         if permitir_llegadas_tarde is not None: config.permitir_llegadas_tarde = permitir_llegadas_tarde
         if tiempo_tolerancia_horas is not None: config.tiempo_tolerancia_horas = tiempo_tolerancia_horas
         if tiempo_tolerancia_minutos is not None: config.tiempo_tolerancia_minutos = tiempo_tolerancia_minutos
-        if zona_horaria is not None: config.zona_horaria = zona_horaria
         if moneda is not None: config.moneda = moneda
         
         # Procesar archivos

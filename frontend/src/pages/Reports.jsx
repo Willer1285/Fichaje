@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Download, Filter, Calendar } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function Reports() {
   const [employees, setEmployees] = useState([]);
@@ -80,24 +80,49 @@ function Reports() {
         responseType: 'blob' // Important for file download
       });
 
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
       const ext = format === 'pdf' ? 'pdf' : 'xlsx';
-      link.setAttribute('download', `reporte_${startDate}_${endDate}.${ext}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      setSuccess("Informe generado y descargado correctamente");
+      const filename = `reporte_${startDate}_${endDate}.${ext}`;
+      const blob = new Blob([response.data]);
+
+      // Convertir blob a base64 para enviar a pywebview si existe
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64data = reader.result;
+
+        // Verificar si existe API pywebview (Desktop App)
+        if (window.pywebview && window.pywebview.api) {
+            try {
+                const res = await window.pywebview.api.save_file(filename, base64data);
+                if (res.success) {
+                    setSuccess(`Informe generado y guardado exitosamente en: ${res.path}`);
+                } else {
+                    setError("Error guardando archivo: " + res.error);
+                }
+            } catch (e) {
+                setError("Error comunicando con la aplicación de escritorio: " + e);
+            }
+        } else {
+            // Fallback web browser
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            
+            setSuccess("Informe generado y descargado correctamente");
+        }
+        setGenerating(false);
+      };
 
     } catch (err) {
       console.error(err);
       setError("Error al generar el informe. Verifique los datos.");
-    } finally {
       setGenerating(false);
-    }
+    } 
   };
 
   return (
@@ -153,7 +178,7 @@ function Reports() {
                 onChange={(e) => setSelectedEmployee(e.target.value)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50"
               >
-                {employees.map(emp => (
+                {Array.isArray(employees) && employees.map(emp => (
                   <option key={emp.id} value={emp.id}>
                     {emp.apellidos}, {emp.nombre} - {emp.dni}
                   </option>
