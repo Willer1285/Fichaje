@@ -128,6 +128,7 @@ class Configuracion:
     id: Optional[int] = None
     # Identificación de la aplicación
     nombre_aplicacion: str = "Fichaje"
+    slogan: str = "Pro"  # Slogan o tagline debajo del nombre de la aplicación
 
     # Datos de la empresa/negocio
     nombre_empresa: str = ""

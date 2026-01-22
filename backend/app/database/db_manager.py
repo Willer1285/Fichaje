@@ -237,6 +237,12 @@ class DatabaseManager:
             if 'moneda' not in columns:
                 cursor.execute("ALTER TABLE configuracion ADD COLUMN moneda TEXT DEFAULT 'EUR'")
 
+            # Migración: Agregar columna slogan si no existe
+            cursor.execute("PRAGMA table_info(configuracion)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'slogan' not in columns:
+                cursor.execute("ALTER TABLE configuracion ADD COLUMN slogan TEXT DEFAULT 'Pro'")
+
             # Tabla de turnos laborales
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS turnos (
@@ -955,9 +961,15 @@ class DatabaseManager:
                 except (KeyError, IndexError):
                     moneda = "EUR"
 
+                try:
+                    slogan = row['slogan'] or "Pro"
+                except (KeyError, IndexError):
+                    slogan = "Pro"
+
                 return Configuracion(
                     id=row['id'],
                     nombre_aplicacion=row['nombre_aplicacion'],
+                    slogan=slogan,
                     nombre_empresa=row['nombre_empresa'] or "",
                     representante_legal=row['representante_legal'] or "",
                     dni_cif=row['dni_cif'] or "",
@@ -988,6 +1000,7 @@ class DatabaseManager:
             cursor.execute("""
                 UPDATE configuracion
                 SET nombre_aplicacion = ?,
+                    slogan = ?,
                     nombre_empresa = ?,
                     representante_legal = ?,
                     dni_cif = ?,
@@ -1009,6 +1022,7 @@ class DatabaseManager:
                 WHERE id = 1
             """, (
                 config.nombre_aplicacion,
+                config.slogan,
                 config.nombre_empresa,
                 config.representante_legal,
                 config.dni_cif,

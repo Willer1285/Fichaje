@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Plus, Edit2, Trash2, Shield, User, Phone, Mail, Eye } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Shield, User, Phone, Mail, Eye, X } from 'lucide-react';
 import { TypeSelectionModal, EmployeeFormModal, EmployeeCardModal } from '../components/EmployeeModals';
 
 const API_URL = "/api";

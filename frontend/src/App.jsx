@@ -103,7 +103,11 @@ function App() {
       setNotifications(notifsRes.data);
       
       const alertsRes = await axios.get(`${API_URL}/notifications/alerts`);
-      setDashboardAlerts(alertsRes.data);
+      // Filtrar alertas que el usuario ya eliminó
+      const deletedAlerts = JSON.parse(localStorage.getItem('deletedAlerts') || '[]');
+      const deletedIds = deletedAlerts.map(item => item.id);
+      const filteredAlerts = alertsRes.data.filter(alert => !deletedIds.includes(alert.id));
+      setDashboardAlerts(filteredAlerts);
       
     } catch (error) {
       console.error("Error cargando datos:", error);
@@ -130,6 +134,18 @@ function App() {
   };
 
   const handleDeleteAlert = (alertId) => {
+    // Guardar la alerta eliminada en localStorage
+    const deletedAlerts = JSON.parse(localStorage.getItem('deletedAlerts') || '[]');
+    const today = new Date().toISOString().split('T')[0];
+    deletedAlerts.push({ id: alertId, date: today });
+    // Mantener solo alertas eliminadas de los últimos 7 días
+    const recentDeleted = deletedAlerts.filter(item => {
+      const itemDate = new Date(item.date);
+      const diffDays = (new Date() - itemDate) / (1000 * 60 * 60 * 24);
+      return diffDays <= 7;
+    });
+    localStorage.setItem('deletedAlerts', JSON.stringify(recentDeleted));
+
     // Eliminar la alerta del estado local
     setDashboardAlerts(prev => prev.filter(alert => alert.id !== alertId));
   };
@@ -207,7 +223,7 @@ function App() {
           )}
           <div>
             <h1 className="font-bold text-xl leading-none tracking-tight">{config?.nombre_aplicacion || 'TimeTrack'}</h1>
-            <span className="text-xs text-slate-400 font-medium tracking-widest uppercase">Pro</span>
+            <span className="text-xs text-slate-400 font-medium tracking-widest uppercase">{config?.slogan || 'Pro'}</span>
           </div>
         </div>
 

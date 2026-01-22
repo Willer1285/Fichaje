@@ -44,35 +44,13 @@ export function TypeSelectionModal({ onClose, onSelect }) {
   );
 }
 
-export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess }) {
+export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, config, catalogs }) {
     if (!isOpen) return null;
 
     const isEdit = !!employee;
     const [activeTab, setActiveTab] = useState(0);
     const [loading, setLoading] = useState(false);
     const [photoPreview, setPhotoPreview] = useState(null);
-    const [catalogs, setCatalogs] = useState({ departments: [], locations: [], schedules: [] });
-    
-    // Cargar catálogos
-    useEffect(() => {
-        const fetchCatalogs = async () => {
-            try {
-                const [deptRes, locRes, schRes] = await Promise.all([
-                    axios.get(`${API_URL}/departments`),
-                    axios.get(`${API_URL}/locations`),
-                    axios.get(`${API_URL}/schedules`)
-                ]);
-                setCatalogs({
-                    departments: deptRes.data,
-                    locations: locRes.data,
-                    schedules: schRes.data
-                });
-            } catch (err) {
-                console.error("Error loading catalogs", err);
-            }
-        };
-        fetchCatalogs();
-    }, []);
 
     // Parsear telefonos si viene de BD
     const initialPhones = employee?.telefono ? (

@@ -62,6 +62,7 @@ function CompanySettings() {
   const [config, setConfig] = useState({
     nombre_empresa: '',
     nombre_aplicacion: 'Fichaje',
+    slogan: 'Pro',
     representante_legal: '',
     dni_cif: '',
     direccion: '',
@@ -131,9 +132,16 @@ function CompanySettings() {
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Identidad Visual</h3>
             
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-slate-700">Nombre de la Aplicación</label>
-              <input type="text" value={config.nombre_aplicacion} onChange={e => setConfig({...config, nombre_aplicacion: e.target.value})} className="input-field" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700">Nombre de la Aplicación</label>
+                <input type="text" value={config.nombre_aplicacion} onChange={e => setConfig({...config, nombre_aplicacion: e.target.value})} className="input-field" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700">Slogan / Tagline</label>
+                <input type="text" value={config.slogan || ''} onChange={e => setConfig({...config, slogan: e.target.value})} className="input-field" placeholder="Pro" />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -338,7 +346,7 @@ function GenericCatalogManager({ title, endpoint, itemName, icon }) {
         setLoading(true);
         try {
             const res = await axios.get(`${API_URL}/${endpoint}`);
-            setItems(res.data);
+            setItems(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -461,7 +469,7 @@ function SchedulesManager() {
         setLoading(true);
         try {
             const res = await axios.get(`${API_URL}/schedules`);
-            setSchedules(res.data);
+            setSchedules(Array.isArray(res.data) ? res.data : []);
         } catch(err) { console.error(err); } finally { setLoading(false); }
     };
 
