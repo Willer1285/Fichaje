@@ -232,23 +232,76 @@ def get_dashboard_alerts(db = Depends(get_db)):
                             }
                         })
 
-        # 4. SOLICITUDES (Vacaciones, Permisos, etc)
+        # 4. SOLICITUDES Y APROBACIONES DE VACACIONES/PERMISOS
         for emp in todos_empleados:
+            # Excluir administradores de solicitudes
+            if emp.es_admin or emp.es_superadmin:
+                continue
+
             solicitudes = db.obtener_solicitudes_empleado(emp.id, incluir_historial=True)
             for solicitud in solicitudes:
-                # Mostrar solicitudes pendientes o modificadas hoy
-                es_pendiente = solicitud.estado == 'pendiente'
-                es_de_hoy = solicitud.fecha_solicitud and solicitud.fecha_solicitud.date() == hoy.date()
-                
-                if es_pendiente or es_de_hoy:
-                    tipo_str = solicitud.tipo.replace("_", " ").title()
-                    estado_text = "pendiente" if solicitud.estado == "pendiente" else solicitud.estado
-
+                # 4.1 Solicitudes CREADAS hoy
+                if solicitud.fecha_solicitud and solicitud.fecha_solicitud.date() == hoy.date():
                     alerts.append({
                         "id": f"request_{solicitud.id}",
                         "type": "info",
-                        "title": f"Solicitud: {tipo_str}",
-                        "message": f"{emp.nombre} {emp.apellidos} - {estado_text}",
+                        "title": "Nueva solicitud",
+                        "message": f"{emp.nombre} {emp.apellidos} solicitó {solicitud.tipo.replace('_', ' ')}",
+                        "time": solicitud.fecha_solicitud.strftime("%I:%M %p") if solicitud.fecha_solicitud else "Hoy",
+                        "details": {
+                            "empleado": f"{emp.nombre} {emp.apellidos}",
+                            "tipo": solicitud.tipo.replace("_", " ").title(),
+                            "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
+                            "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
+                            "dias": solicitud.dias_solicitados,
+                            "estado": solicitud.estado
+                        }
+                    })
+
+                # 4.2 Solicitudes APROBADAS o RECHAZADAS hoy
+                elif solicitud.fecha_respuesta and solicitud.fecha_respuesta.date() == hoy.date():
+                    if solicitud.estado == "aprobada":
+                        alerts.append({
+                            "id": f"approved_{solicitud.id}",
+                            "type": "success",
+                            "title": "Solicitud aprobada",
+                            "message": f"{emp.nombre} {emp.apellidos} - {solicitud.tipo.replace('_', ' ')} aprobado",
+                            "time": solicitud.fecha_respuesta.strftime("%I:%M %p"),
+                            "details": {
+                                "empleado": f"{emp.nombre} {emp.apellidos}",
+                                "tipo": solicitud.tipo.replace("_", " ").title(),
+                                "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
+                                "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
+                                "dias": solicitud.dias_solicitados,
+                                "estado": "Aprobada",
+                                "aprobado_por": solicitud.aprobado_por or "Administrador"
+                            }
+                        })
+                    elif solicitud.estado == "rechazada":
+                        alerts.append({
+                            "id": f"rejected_{solicitud.id}",
+                            "type": "error",
+                            "title": "Solicitud rechazada",
+                            "message": f"{emp.nombre} {emp.apellidos} - {solicitud.tipo.replace('_', ' ')} rechazado",
+                            "time": solicitud.fecha_respuesta.strftime("%I:%M %p"),
+                            "details": {
+                                "empleado": f"{emp.nombre} {emp.apellidos}",
+                                "tipo": solicitud.tipo.replace("_", " ").title(),
+                                "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
+                                "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
+                                "motivo": solicitud.motivo_rechazo or "Sin motivo especificado",
+                                "rechazado_por": solicitud.aprobado_por or "Administrador"
+                            }
+                        })
+
+                # 4.3 Solicitudes PENDIENTES (además de las de hoy)
+                elif solicitud.estado == 'pendiente':
+                    tipo_str = solicitud.tipo.replace("_", " ").title()
+                    alerts.append({
+                        "id": f"request_pending_{solicitud.id}",
+                        "type": "info",
+                        "title": f"Solicitud pendiente: {tipo_str}",
+                        "message": f"{emp.nombre} {emp.apellidos} - pendiente",
                         "time": solicitud.fecha_solicitud.strftime("%I:%M %p") if solicitud.fecha_solicitud else "Hoy",
                         "details": {
                             "empleado": f"{emp.nombre} {emp.apellidos}",
@@ -256,9 +309,48 @@ def get_dashboard_alerts(db = Depends(get_db)):
                             "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
                             "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
                             "dias": solicitud.dias_solicitados,
-                            "estado": estado_text
+                            "estado": "pendiente"
                         }
                     })
+
+            # 5. AUSENCIAS JUSTIFICADAS registradas HOY
+            ausencias = db.obtener_ausencias_empleado(emp.id, incluir_historial=True)
+            for ausencia in ausencias:
+                # Ausencias registradas hoy
+                if ausencia.fecha_registro and ausencia.fecha_registro.date() == hoy.date():
+                    alerts.append({
+                        "id": f"absence_registered_{ausencia.id}",
+                        "type": "info",
+                        "title": "Ausencia registrada",
+                        "message": f"{emp.nombre} {emp.apellidos} registró ausencia: {ausencia.tipo_ausencia}",
+                        "time": ausencia.fecha_registro.strftime("%I:%M %p"),
+                        "details": {
+                            "empleado": f"{emp.nombre} {emp.apellidos}",
+                            "tipo": ausencia.tipo_ausencia,
+                            "fecha_inicio": ausencia.fecha_inicio.strftime("%Y-%m-%d"),
+                            "fecha_fin": ausencia.fecha_fin.strftime("%Y-%m-%d"),
+                            "motivo": ausencia.motivo_empleado or "Sin motivo",
+                            "estado": ausencia.estado
+                        }
+                    })
+
+                # Ausencias APROBADAS o JUSTIFICADAS hoy
+                elif ausencia.fecha_aprobacion and ausencia.fecha_aprobacion.date() == hoy.date():
+                    if ausencia.estado in ['justificada', 'aprobada']:
+                        alerts.append({
+                            "id": f"absence_approved_{ausencia.id}",
+                            "type": "success",
+                            "title": "Ausencia justificada",
+                            "message": f"{emp.nombre} {emp.apellidos} - Ausencia aprobada",
+                            "time": ausencia.fecha_aprobacion.strftime("%I:%M %p"),
+                            "details": {
+                                "empleado": f"{emp.nombre} {emp.apellidos}",
+                                "tipo": ausencia.tipo_ausencia,
+                                "fecha_inicio": ausencia.fecha_inicio.strftime("%Y-%m-%d"),
+                                "fecha_fin": ausencia.fecha_fin.strftime("%Y-%m-%d"),
+                                "motivo": ausencia.motivo_empleado or "Sin motivo"
+                            }
+                        })
 
         # Limitar a máximo 20 alertas
         alerts.sort(key=lambda x: x.get('time', ''), reverse=True) # Ordenar por hora (simple string sort, podría mejorarse)
@@ -449,6 +541,167 @@ def get_alert_details(alert_id: str, db = Depends(get_db)):
                     "motivo": solicitud.motivo_empleado or "Sin motivo especificado",
                     "fecha_solicitud": solicitud.fecha_solicitud.strftime("%Y-%m-%d %I:%M %p") if solicitud.fecha_solicitud else "N/A"
                 }
+            }
+
+        elif alert_type == "approved":
+            # Solicitud aprobada
+            solicitud = db.obtener_solicitud_por_id(entity_id)
+            if not solicitud:
+                raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+            empleado = db.obtener_empleado(solicitud.empleado_id)
+
+            return {
+                "id": alert_id,
+                "type": "success",
+                "title": "Solicitud Aprobada - Detalles Completos",
+                "empleado": {
+                    "id": empleado.id,
+                    "nombre": f"{empleado.nombre} {empleado.apellidos}",
+                    "dni": empleado.dni,
+                    "numero_empleado": empleado.numero_empleado,
+                    "email": empleado.email,
+                    "telefono": empleado.telefono,
+                    "cargo": empleado.cargo,
+                    "departamento": empleado.cargo or "N/A"
+                },
+                "solicitud": {
+                    "tipo": solicitud.tipo.replace("_", " ").title(),
+                    "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
+                    "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
+                    "dias_solicitados": solicitud.dias_solicitados,
+                    "estado": "Aprobada",
+                    "motivo": solicitud.motivo_empleado or "Sin motivo especificado",
+                    "fecha_aprobacion": solicitud.fecha_respuesta.strftime("%Y-%m-%d %I:%M %p") if solicitud.fecha_respuesta else "N/A",
+                    "aprobado_por": solicitud.aprobado_por or "Administrador"
+                }
+            }
+
+        elif alert_type == "rejected":
+            # Solicitud rechazada
+            solicitud = db.obtener_solicitud_por_id(entity_id)
+            if not solicitud:
+                raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+            empleado = db.obtener_empleado(solicitud.empleado_id)
+
+            return {
+                "id": alert_id,
+                "type": "error",
+                "title": "Solicitud Rechazada - Detalles Completos",
+                "empleado": {
+                    "id": empleado.id,
+                    "nombre": f"{empleado.nombre} {empleado.apellidos}",
+                    "dni": empleado.dni,
+                    "numero_empleado": empleado.numero_empleado,
+                    "email": empleado.email,
+                    "telefono": empleado.telefono,
+                    "cargo": empleado.cargo,
+                    "departamento": empleado.cargo or "N/A"
+                },
+                "solicitud": {
+                    "tipo": solicitud.tipo.replace("_", " ").title(),
+                    "fecha_inicio": solicitud.fecha_inicio.strftime("%Y-%m-%d"),
+                    "fecha_fin": solicitud.fecha_fin.strftime("%Y-%m-%d"),
+                    "dias_solicitados": solicitud.dias_solicitados,
+                    "estado": "Rechazada",
+                    "motivo_solicitud": solicitud.motivo_empleado or "Sin motivo",
+                    "motivo_rechazo": solicitud.motivo_rechazo or "Sin motivo especificado",
+                    "fecha_rechazo": solicitud.fecha_respuesta.strftime("%Y-%m-%d %I:%M %p") if solicitud.fecha_respuesta else "N/A",
+                    "rechazado_por": solicitud.aprobado_por or "Administrador"
+                }
+            }
+
+        elif alert_type == "absence":
+            # Parse para distinguir entre "absence_registered" y "absence_approved"
+            # Si el alert_id tiene más partes, extraer el subtipo
+            if len(parts) > 2:
+                absence_subtype = parts[1]  # "registered" o "approved"
+                absence_id = int(parts[2])
+            else:
+                # Compatibilidad con formato antiguo
+                absence_id = entity_id
+                absence_subtype = "registered"
+
+            ausencia = db.obtener_ausencia_por_id(absence_id)
+            if not ausencia:
+                raise HTTPException(status_code=404, detail="Ausencia no encontrada")
+
+            empleado = db.obtener_empleado(ausencia.empleado_id)
+
+            return {
+                "id": alert_id,
+                "type": "info" if absence_subtype == "registered" else "success",
+                "title": f"Ausencia {'Registrada' if absence_subtype == 'registered' else 'Aprobada'} - Detalles Completos",
+                "empleado": {
+                    "id": empleado.id,
+                    "nombre": f"{empleado.nombre} {empleado.apellidos}",
+                    "dni": empleado.dni,
+                    "numero_empleado": empleado.numero_empleado,
+                    "email": empleado.email,
+                    "telefono": empleado.telefono,
+                    "cargo": empleado.cargo,
+                    "departamento": empleado.cargo or "N/A"
+                },
+                "ausencia": {
+                    "tipo": ausencia.tipo_ausencia,
+                    "fecha_inicio": ausencia.fecha_inicio.strftime("%Y-%m-%d"),
+                    "fecha_fin": ausencia.fecha_fin.strftime("%Y-%m-%d"),
+                    "motivo": ausencia.motivo_empleado or "Sin motivo especificado",
+                    "estado": ausencia.estado,
+                    "fecha_registro": ausencia.fecha_registro.strftime("%Y-%m-%d %I:%M %p") if ausencia.fecha_registro else "N/A",
+                    "fecha_aprobacion": ausencia.fecha_aprobacion.strftime("%Y-%m-%d %I:%M %p") if ausencia.fecha_aprobacion else "N/A"
+                }
+            }
+
+        elif alert_type == "new":
+            # Nuevo empleado (format: "new_employee_{id}" or "new_emp_{id}")
+            if len(parts) > 2:
+                if parts[1] in ["employee", "emp"]:
+                    emp_id = int(parts[2])
+                else:
+                    emp_id = entity_id
+            else:
+                emp_id = entity_id
+
+            empleado = db.obtener_empleado(emp_id)
+            if not empleado:
+                raise HTTPException(status_code=404, detail="Empleado no encontrado")
+
+            turno = db.obtener_turno(empleado.turno_id) if empleado.turno_id else None
+            tipo_usuario = "Administrador" if (empleado.es_admin or empleado.es_superadmin) else "Empleado"
+
+            return {
+                "id": alert_id,
+                "type": "info",
+                "title": f"Nuevo {tipo_usuario} - Detalles Completos",
+                "empleado": {
+                    "id": empleado.id,
+                    "nombre": f"{empleado.nombre} {empleado.apellidos}",
+                    "dni": empleado.dni,
+                    "numero_empleado": empleado.numero_empleado,
+                    "email": empleado.email,
+                    "telefono": empleado.telefono,
+                    "cargo": empleado.cargo or "Sin cargo",
+                    "departamento": empleado.cargo or "N/A",
+                    "tipo": tipo_usuario,
+                    "fecha_alta": empleado.fecha_alta.strftime("%Y-%m-%d") if empleado.fecha_alta else "N/A"
+                },
+                "turno": {
+                    "nombre": turno.nombre if turno else "Sin turno asignado",
+                    "hora_inicio": turno.hora_inicio if turno else "N/A",
+                    "hora_fin": turno.hora_fin if turno else "N/A"
+                }
+            }
+
+        elif alert_type == "mod":
+            # Modificación del sistema
+            # No tenemos una tabla de modificaciones individual, así que retornar info básica
+            return {
+                "id": alert_id,
+                "type": "info",
+                "title": "Cambio en Sistema - Detalles",
+                "message": "Se realizó un cambio en el sistema. Ver historial de modificaciones para más detalles."
             }
 
         else:

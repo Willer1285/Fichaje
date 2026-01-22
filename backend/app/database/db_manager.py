@@ -1202,6 +1202,16 @@ class DatabaseManager:
 
             return [self._row_to_solicitud_vacacion(row) for row in cursor.fetchall()]
 
+    def obtener_solicitud_por_id(self, solicitud_id: int) -> Optional[SolicitudVacacion]:
+        """Obtiene una solicitud de vacaciones por su ID"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM solicitudes_vacaciones WHERE id = ?
+            """, (solicitud_id,))
+            row = cursor.fetchone()
+            return self._row_to_solicitud_vacacion(row) if row else None
+
     def obtener_solicitudes_pendientes(self) -> List[Tuple[SolicitudVacacion, Employee]]:
         """Obtiene todas las solicitudes pendientes con datos del empleado"""
         with self.get_connection() as conn:
@@ -1495,6 +1505,16 @@ class DatabaseManager:
                 """, (empleado_id,))
 
             return [self._row_to_ausencia(row) for row in cursor.fetchall()]
+
+    def obtener_ausencia_por_id(self, ausencia_id: int) -> Optional[Ausencia]:
+        """Obtiene una ausencia por su ID"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM ausencias WHERE id = ?
+            """, (ausencia_id,))
+            row = cursor.fetchone()
+            return self._row_to_ausencia(row) if row else None
 
     def obtener_ausencias_pendientes_admin(self) -> List[Tuple[Ausencia, Employee]]:
         """Obtiene todas las ausencias pendientes de aprobación con datos del empleado"""
