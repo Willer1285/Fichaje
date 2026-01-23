@@ -39,10 +39,13 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                 except:
                     pass
             
+            # Formatear fecha solo como YYYY-MM-DD
+            fecha_str = fichaje.fecha.strftime("%Y-%m-%d") if hasattr(fichaje.fecha, 'strftime') else str(fichaje.fecha).split('T')[0]
+
             events.append({
                 "id": f"fichaje_{fichaje.id}",
                 "title": title,
-                "start": fichaje.fecha.date().isoformat() if hasattr(fichaje.fecha, 'date') else fichaje.fecha.isoformat(),
+                "start": fecha_str,
                 "allDay": True,
                 "backgroundColor": color,
                 "borderColor": color,

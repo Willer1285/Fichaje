@@ -87,11 +87,45 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
         motivo_egreso: employee?.motivo_egreso || ''
     });
 
+    // Reinicializar formData y photoPreview cuando cambie el empleado
     useEffect(() => {
+        const initialPhones = employee?.telefono ? (
+            employee.telefono.startsWith('[') ? JSON.parse(employee.telefono) : [employee.telefono]
+        ) : [''];
+
+        setFormData({
+            primer_nombre: employee?.primer_nombre || '',
+            segundo_nombre: employee?.segundo_nombre || '',
+            primer_apellido: employee?.primer_apellido || '',
+            segundo_apellido: employee?.segundo_apellido || '',
+            nombre: employee?.nombre || '',
+            apellidos: employee?.apellidos || '',
+            dni: employee?.dni || '',
+            telefonos: initialPhones,
+            email: employee?.email || '',
+            numero_empleado: employee?.numero_empleado || '',
+            cargo: employee?.cargo || '',
+            departamento_id: employee?.departamento_id || '',
+            ubicacion_id: employee?.ubicacion_id || '',
+            turno_id: employee?.turno_id || '',
+            pago_por_hora: employee?.pago_por_hora || 0,
+            pago_hora_especial: employee?.pago_hora_especial || 0,
+            es_admin: type === 'admin',
+            password: '',
+            foto: null,
+            eliminar_foto: false,
+            es_egresado: employee ? !employee.active : false,
+            fecha_egreso: employee?.fecha_egreso ? employee.fecha_egreso.split('T')[0] : '',
+            motivo_egreso: employee?.motivo_egreso || ''
+        });
+
+        // Actualizar photoPreview
         if (employee?.foto_path) {
             setPhotoPreview(`${API_URL.replace('/api', '')}${employee.foto_path}`);
+        } else {
+            setPhotoPreview(null);
         }
-    }, [employee]);
+    }, [employee, type]);
 
     const handlePhoneChange = (index, value) => {
         const newPhones = [...formData.telefonos];

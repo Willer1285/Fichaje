@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Check, X } from 'lucide-react';
+import { AlertDialog } from '../components/AlertDialog';
 
 const API_URL = "/api";
 
@@ -9,11 +10,14 @@ function Requests() {
   const [vacations, setVacations] = useState([]);
   const [absences, setAbsences] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   // Modal Rejection State
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
+
+  // Alert Dialog State
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, message: '' });
 
   useEffect(() => {
     fetchRequests();
@@ -52,7 +56,7 @@ function Requests() {
       });
       fetchRequests();
     } catch (error) {
-      alert("Error al procesar solicitud");
+      setAlertDialog({ isOpen: true, message: "Error al procesar solicitud: " + (error.response?.data?.detail || error.message) });
     }
   };
 
@@ -69,7 +73,7 @@ function Requests() {
           setShowRejectModal(false);
           fetchRequests();
       } catch (error) {
-          alert("Error al rechazar solicitud");
+          setAlertDialog({ isOpen: true, message: "Error al rechazar solicitud: " + (error.response?.data?.detail || error.message) });
       }
   };
 
@@ -185,6 +189,14 @@ function Requests() {
           </div>
         </div>
       )}
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ isOpen: false, message: '' })}
+        message={alertDialog.message}
+        variant="error"
+      />
     </div>
   );
 }

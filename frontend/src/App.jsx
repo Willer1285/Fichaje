@@ -10,16 +10,21 @@ import Reports from './pages/Reports';
 import Config from './pages/Config';
 import CalendarPage from './pages/Calendar';
 import { TypeSelectionModal, EmployeeFormModal } from './components/EmployeeModals';
+import { AlertDialog } from './components/AlertDialog';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const API_URL = "/api";
 
 function App() {
   const [user, setUser] = useState(null);
+  const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showNewModal, setShowNewModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [newType, setNewType] = useState('employee');
+
+  // Alert Dialog State
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, message: '', variant: 'error' });
   
   // Dashboard State
   const [period, setPeriod] = useState('day');
@@ -81,6 +86,7 @@ function App() {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
+        setAvatarTimestamp(Date.now()); // Actualizar timestamp para forzar recarga de imagen
       }
     };
 
@@ -187,7 +193,7 @@ function App() {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      alert(`Fichajes ${format.toUpperCase()} exportados exitosamente.`);
+      setAlertDialog({ isOpen: true, message: `Fichajes ${format.toUpperCase()} exportados exitosamente.`, variant: 'success' });
 
     } catch (error) {
       console.error('Error exportando fichajes:', error);
@@ -203,8 +209,8 @@ function App() {
       } else if (error.response?.data?.detail) {
            errorMessage += " " + error.response.data.detail;
       }
-      
-      alert(errorMessage);
+
+      setAlertDialog({ isOpen: true, message: errorMessage, variant: 'error' });
     }
   };
 
@@ -252,7 +258,7 @@ function App() {
           <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
             {user.foto_path ? (
               <img
-                src={`${API_URL.replace('/api', '')}${user.foto_path}`}
+                src={`${API_URL.replace('/api', '')}${user.foto_path}?t=${avatarTimestamp}`}
                 alt={`${user.nombre} ${user.apellidos}`}
                 className="w-10 h-10 rounded-full object-cover border-2 border-white/20 shadow-lg"
               />
@@ -843,6 +849,14 @@ function App() {
           </ErrorBoundary>
         </div>
       </main>
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ isOpen: false, message: '', variant: 'error' })}
+        message={alertDialog.message}
+        variant={alertDialog.variant}
+      />
     </div>
   );
 }
