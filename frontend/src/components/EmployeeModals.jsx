@@ -87,13 +87,18 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
         motivo_egreso: employee?.motivo_egreso || ''
     });
 
-    // Reinicializar formData y photoPreview cuando cambie el empleado
+    // Reinicializar formData y photoPreview cuando cambie el empleado o se abra el modal
     useEffect(() => {
+        if (!isOpen) return; // Solo ejecutar cuando el modal está abierto
+
+        console.log('🔄 [EmployeeFormModal] useEffect triggered', { isOpen, employeeId: employee?.id, type });
+        console.log('📦 [EmployeeFormModal] Employee data:', employee);
+
         const initialPhones = employee?.telefono ? (
             employee.telefono.startsWith('[') ? JSON.parse(employee.telefono) : [employee.telefono]
         ) : [''];
 
-        setFormData({
+        const newFormData = {
             primer_nombre: employee?.primer_nombre || '',
             segundo_nombre: employee?.segundo_nombre || '',
             primer_apellido: employee?.primer_apellido || '',
@@ -117,7 +122,16 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
             es_egresado: employee ? !employee.active : false,
             fecha_egreso: employee?.fecha_egreso ? employee.fecha_egreso.split('T')[0] : '',
             motivo_egreso: employee?.motivo_egreso || ''
+        };
+
+        console.log('✅ [EmployeeFormModal] Setting formData:', {
+            primer_nombre: newFormData.primer_nombre,
+            segundo_nombre: newFormData.segundo_nombre,
+            primer_apellido: newFormData.primer_apellido,
+            segundo_apellido: newFormData.segundo_apellido
         });
+
+        setFormData(newFormData);
 
         // Actualizar photoPreview
         if (employee?.foto_path) {
@@ -125,7 +139,7 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
         } else {
             setPhotoPreview(null);
         }
-    }, [employee, type]);
+    }, [employee, type, isOpen]);
 
     const handlePhoneChange = (index, value) => {
         const newPhones = [...formData.telefonos];

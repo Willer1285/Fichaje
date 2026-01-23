@@ -88,6 +88,13 @@ function Employees() {
   };
 
   const handleEdit = (emp) => {
+    console.log('✏️ [Employees] handleEdit called with employee:', emp);
+    console.log('📋 [Employees] Campos separados del empleado:', {
+      primer_nombre: emp.primer_nombre,
+      segundo_nombre: emp.segundo_nombre,
+      primer_apellido: emp.primer_apellido,
+      segundo_apellido: emp.segundo_apellido
+    });
     setEditingEmployee(emp);
     setFormType(emp.es_admin ? 'admin' : 'employee');
     setShowFormModal(true);
@@ -275,20 +282,31 @@ function Employees() {
             catalogs={{ departments, locations, schedules }}
             config={config}
             onSuccess={async () => {
+              console.log('✅ [Employees] onSuccess called after save');
               setShowFormModal(false);
               await fetchEmployees();
 
               // Si el empleado editado es el usuario actual, actualizar localStorage
               const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+              console.log(`🔍 [Employees] Checking if edited employee is current user: editingEmployee.id=${editingEmployee?.id}, currentUser.id=${currentUser.id}`);
+
               if (editingEmployee && currentUser.id === editingEmployee.id) {
+                console.log('🔄 [Employees] Es el usuario actual, actualizando localStorage...');
                 try {
                   const res = await axios.get(`${API_URL}/employees/${editingEmployee.id}`);
+                  console.log('📦 [Employees] Datos actualizados del empleado:', res.data);
+
                   const updatedUser = { ...currentUser, ...res.data };
+                  console.log('💾 [Employees] Guardando en localStorage:', updatedUser);
                   localStorage.setItem('user', JSON.stringify(updatedUser));
+
+                  console.log('📢 [Employees] Disparando evento userUpdated');
                   window.dispatchEvent(new Event('userUpdated')); // Trigger sidebar update
                 } catch (err) {
-                  console.error('Error actualizando usuario en localStorage:', err);
+                  console.error('❌ Error actualizando usuario en localStorage:', err);
                 }
+              } else {
+                console.log('ℹ️ [Employees] NO es el usuario actual, no se actualiza localStorage');
               }
             }}
         />

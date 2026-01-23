@@ -21,27 +21,39 @@ function CalendarPage() {
       // Calcular primer y último día del mes visible (incluyendo días de relleno)
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      
+
       const firstDayOfMonth = new Date(year, month, 1);
       const lastDayOfMonth = new Date(year, month + 1, 0);
-      
+
       // Ajustar al lunes anterior si es necesario para llenar la grilla
       const start = new Date(firstDayOfMonth);
       start.setDate(start.getDate() - (start.getDay() === 0 ? 6 : start.getDay() - 1));
-      
+
       // Ajustar al domingo posterior
       const end = new Date(lastDayOfMonth);
       end.setDate(end.getDate() + (7 - end.getDay()));
 
+      const startStr = start.toISOString().split('T')[0];
+      const endStr = end.toISOString().split('T')[0];
+
+      console.log(`📅 [Calendar] Solicitando eventos: ${startStr} a ${endStr}`);
+
       const res = await axios.get(`${API_URL}/calendar/events`, {
         params: {
-          start: start.toISOString().split('T')[0],
-          end: end.toISOString().split('T')[0]
+          start: startStr,
+          end: endStr
         }
       });
+
+      console.log(`✅ [Calendar] Respuesta recibida:`, res.data);
+      console.log(`   Total eventos: ${res.data ? res.data.length : 0}`);
+      if (res.data && res.data.length > 0) {
+        console.log(`   Primer evento:`, res.data[0]);
+      }
+
       setEvents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Error fetching events:", err);
+      console.error("❌ [Calendar] Error fetching events:", err);
     } finally {
       setLoading(false);
     }

@@ -8,15 +8,21 @@ router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 def get_calendar_events(start: str, end: str, db = Depends(get_db)):
     """Obtiene eventos para el calendario (fichajes, vacaciones, ausencias)"""
     try:
-        # print(f"DEBUG: Calendar events for range {start} to {end}")
+        print(f"\n📅 [GET /calendar/events] Solicitando eventos para rango {start} a {end}")
         start_date = datetime.strptime(start, "%Y-%m-%d")
         end_date = datetime.strptime(end, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-        
+        print(f"   start_date (datetime): {start_date}")
+        print(f"   end_date (datetime): {end_date}")
+
         events = []
-        
+
         # 1. Fichajes (Llegadas tarde, asistencias)
         fichajes = db.obtener_todos_fichajes_periodo(start_date, end_date)
-        # print(f"DEBUG: Calendar - Found {len(fichajes)} checkins")
+        print(f"✅ [Calendar] Fichajes encontrados: {len(fichajes)}")
+
+        if len(fichajes) > 0:
+            print(f"   Primer fichaje: fecha={fichajes[0][0].fecha}, empleado={fichajes[0][1].nombre}")
+
         turnos = {t.id: t for t in db.listar_turnos()}
         config = db.obtener_configuracion()
         
@@ -42,7 +48,7 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
             # Formatear fecha solo como YYYY-MM-DD
             fecha_str = fichaje.fecha.strftime("%Y-%m-%d") if hasattr(fichaje.fecha, 'strftime') else str(fichaje.fecha).split('T')[0]
 
-            events.append({
+            event = {
                 "id": f"fichaje_{fichaje.id}",
                 "title": title,
                 "start": fecha_str,
@@ -55,7 +61,12 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                     "late": is_late,
                     "checkIn": fichaje.hora_entrada.strftime("%I:%M %p") if fichaje.hora_entrada else "-"
                 }
-            })
+            }
+
+            if len(events) == 0:  # Solo logear el primer evento
+                print(f"   📌 Primer evento creado: id={event['id']}, start={event['start']}, title={event['title']}")
+
+            events.append(event)
 
         # 2. Vacaciones (TODAS - pendientes, aprobadas, rechazadas)
         # Necesitamos un método para obtener vacaciones por rango de fechas de todos los empleados
@@ -167,9 +178,15 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                             "motivo": a.motivo or ""
                         }
                     })
-                        
+
+        print(f"📊 [Calendar] Total eventos devueltos: {len(events)}")
+        if len(events) > 0:
+            print(f"   Primer evento: {events[0]}")
+
         return events
 
     except Exception as e:
-        print(f"Error fetching calendar events: {e}")
+        print(f"❌ Error fetching calendar events: {e}")
+        import traceback
+        traceback.print_exc()
         return []

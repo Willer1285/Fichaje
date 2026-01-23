@@ -83,13 +83,20 @@ function App() {
   // Verificar sesión y escuchar cambios en usuario
   useEffect(() => {
     const loadUser = () => {
+      console.log('👤 [App] loadUser called');
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
-        setAvatarTimestamp(Date.now()); // Actualizar timestamp para forzar recarga de imagen
+        const parsedUser = JSON.parse(storedUser);
+        console.log('   Usuario cargado:', parsedUser);
+        console.log('   foto_path:', parsedUser.foto_path);
+        setUser(parsedUser);
+        const newTimestamp = Date.now();
+        console.log('   Nuevo avatarTimestamp:', newTimestamp);
+        setAvatarTimestamp(newTimestamp); // Actualizar timestamp para forzar recarga de imagen
       }
     };
 
+    console.log('🔧 [App] Setting up user listener');
     loadUser();
 
     // Escuchar cambios en localStorage (cuando se actualiza el perfil)

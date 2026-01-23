@@ -86,7 +86,13 @@ def read_employee(employee_id: int, db = Depends(get_db)):
     e = db.obtener_empleado(employee_id)
     if not e:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
-        
+
+    print(f"📦 [GET /employees/{employee_id}] Empleado obtenido:")
+    print(f"   primer_nombre: {e.primer_nombre}")
+    print(f"   segundo_nombre: {e.segundo_nombre}")
+    print(f"   primer_apellido: {e.primer_apellido}")
+    print(f"   segundo_apellido: {e.segundo_apellido}")
+
     return {
         "id": e.id,
         "primer_nombre": e.primer_nombre or "",
