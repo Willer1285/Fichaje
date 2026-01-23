@@ -267,17 +267,17 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                             
                             <Select label="Departamento" value={formData.departamento_id} onChange={e => setFormData({...formData, departamento_id: e.target.value})}>
                                 <option value="">Seleccionar...</option>
-                                {catalogs.departments.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                                {Array.isArray(catalogs?.departments) && catalogs.departments.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
                             </Select>
 
                             <Select label="Ubicación / Sede" value={formData.ubicacion_id} onChange={e => setFormData({...formData, ubicacion_id: e.target.value})}>
                                 <option value="">Seleccionar...</option>
-                                {catalogs.locations.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                                {Array.isArray(catalogs?.locations) && catalogs.locations.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                             </Select>
 
                             <Select label="Horario" value={formData.turno_id} onChange={e => setFormData({...formData, turno_id: e.target.value})}>
                                 <option value="">Seleccionar...</option>
-                                {catalogs.schedules.map(s => <option key={s.id} value={s.id}>{s.nombre} ({s.hora_inicio}-{s.hora_fin})</option>)}
+                                {Array.isArray(catalogs?.schedules) && catalogs.schedules.map(s => <option key={s.id} value={s.id}>{s.nombre} ({s.hora_inicio}-{s.hora_fin})</option>)}
                             </Select>
                         </div>
 
@@ -343,13 +343,13 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
     );
 }
 
-export function EmployeeCardModal({ isOpen, onClose, employee, catalogs }) {
+export function EmployeeCardModal({ isOpen, onClose, employee, catalogs = { departments: [], locations: [], schedules: [] } }) {
     if (!isOpen || !employee) return null;
 
-    const department = catalogs.departments.find(d => d.id === employee.departamento_id)?.nombre || '-';
-    const location = catalogs.locations.find(l => l.id === employee.ubicacion_id)?.nombre || '-';
-    const schedule = catalogs.schedules.find(s => s.id === employee.turno_id);
-    const phones = employee.telefono.startsWith('[') ? JSON.parse(employee.telefono) : [employee.telefono];
+    const department = Array.isArray(catalogs?.departments) ? catalogs.departments.find(d => d.id === employee.departamento_id)?.nombre || '-' : '-';
+    const location = Array.isArray(catalogs?.locations) ? catalogs.locations.find(l => l.id === employee.ubicacion_id)?.nombre || '-' : '-';
+    const schedule = Array.isArray(catalogs?.schedules) ? catalogs.schedules.find(s => s.id === employee.turno_id) : null;
+    const phones = employee.telefono?.startsWith('[') ? JSON.parse(employee.telefono) : [employee.telefono || ''];
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">

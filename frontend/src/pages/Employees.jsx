@@ -52,12 +52,16 @@ function Employees() {
         axios.get(`${API_URL}/schedules`),
         axios.get(`${API_URL}/config`)
       ]);
-      setDepartments(deptRes.data);
-      setLocations(locRes.data);
-      setSchedules(schRes.data);
-      setConfig(confRes.data);
+      setDepartments(Array.isArray(deptRes.data) ? deptRes.data : []);
+      setLocations(Array.isArray(locRes.data) ? locRes.data : []);
+      setSchedules(Array.isArray(schRes.data) ? schRes.data : []);
+      setConfig(confRes.data || { moneda: 'EUR' });
     } catch (err) {
       console.error("Error loading catalogs", err);
+      // Asegurar que los estados siempre sean arrays incluso en caso de error
+      setDepartments([]);
+      setLocations([]);
+      setSchedules([]);
     }
   };
 

@@ -37,6 +37,7 @@ def get_config(db = Depends(get_db)):
         config = db.obtener_configuracion()
         return {
             "nombre_aplicacion": config.nombre_aplicacion,
+            "slogan": config.slogan,
             "nombre_empresa": config.nombre_empresa,
             "representante_legal": config.representante_legal,
             "dni_cif": config.dni_cif,
@@ -52,6 +53,7 @@ def get_config(db = Depends(get_db)):
             "permitir_llegadas_tarde": config.permitir_llegadas_tarde,
             "tiempo_tolerancia_horas": config.tiempo_tolerancia_horas,
             "tiempo_tolerancia_minutos": config.tiempo_tolerancia_minutos,
+            "zona_horaria": config.zona_horaria,
             "moneda": config.moneda
         }
     except Exception as e:
@@ -60,6 +62,7 @@ def get_config(db = Depends(get_db)):
 @router.put("")
 def update_config(
     nombre_aplicacion: Optional[str] = Form(None),
+    slogan: Optional[str] = Form(None),
     nombre_empresa: Optional[str] = Form(None),
     representante_legal: Optional[str] = Form(None),
     dni_cif: Optional[str] = Form(None),
@@ -73,6 +76,7 @@ def update_config(
     permitir_llegadas_tarde: Optional[bool] = Form(None),
     tiempo_tolerancia_horas: Optional[int] = Form(None),
     tiempo_tolerancia_minutos: Optional[int] = Form(None),
+    zona_horaria: Optional[str] = Form(None),
     moneda: Optional[str] = Form(None),
     logo: UploadFile = File(None),
     icono: UploadFile = File(None),
@@ -86,6 +90,7 @@ def update_config(
         # Aquí asumimos que se envía el valor actual si no se cambia.
         
         if nombre_aplicacion is not None: config.nombre_aplicacion = nombre_aplicacion
+        if slogan is not None: config.slogan = slogan
         if nombre_empresa is not None: config.nombre_empresa = nombre_empresa
         if representante_legal is not None: config.representante_legal = representante_legal
         if dni_cif is not None: config.dni_cif = dni_cif
@@ -99,6 +104,7 @@ def update_config(
         if permitir_llegadas_tarde is not None: config.permitir_llegadas_tarde = permitir_llegadas_tarde
         if tiempo_tolerancia_horas is not None: config.tiempo_tolerancia_horas = tiempo_tolerancia_horas
         if tiempo_tolerancia_minutos is not None: config.tiempo_tolerancia_minutos = tiempo_tolerancia_minutos
+        if zona_horaria is not None: config.zona_horaria = zona_horaria
         if moneda is not None: config.moneda = moneda
         
         # Procesar archivos
