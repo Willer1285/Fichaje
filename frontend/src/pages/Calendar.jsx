@@ -39,7 +39,7 @@ function CalendarPage() {
           end: end.toISOString().split('T')[0]
         }
       });
-      setEvents(res.data);
+      setEvents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Error fetching events:", err);
     } finally {
@@ -86,10 +86,9 @@ function CalendarPage() {
 
   const handleDayClick = (day) => {
     const dayStr = day.date.toISOString().split('T')[0];
-    const eventsForDay = events.filter(e => {
-        // Simple check: start date matches (ignoring multi-day for simplicity in modal list)
-        return e.start.startsWith(dayStr); 
-    });
+    const eventsForDay = Array.isArray(events)
+      ? events.filter(e => e.start.startsWith(dayStr))
+      : [];
     setSelectedDay(day.date);
     setDayEvents(eventsForDay);
   };
@@ -97,7 +96,9 @@ function CalendarPage() {
   // Helper para obtener eventos de un día específico para renderizar los dots
   const getEventsForRender = (date) => {
       const dateStr = date.toISOString().split('T')[0];
-      return events.filter(e => e.start.startsWith(dateStr));
+      return Array.isArray(events)
+        ? events.filter(e => e.start.startsWith(dateStr))
+        : [];
   };
 
   return (
@@ -201,9 +202,10 @@ function CalendarPage() {
                 <div className="space-y-3">
                   {/* Agrupar eventos por tipo */}
                   {(() => {
-                    const attendances = dayEvents.filter(e => e.extendedProps.type === 'attendance');
-                    const vacations = dayEvents.filter(e => e.extendedProps.type === 'vacation');
-                    const absences = dayEvents.filter(e => e.extendedProps.type === 'absence');
+                    const safeEvents = Array.isArray(dayEvents) ? dayEvents : [];
+                    const attendances = safeEvents.filter(e => e.extendedProps?.type === 'attendance');
+                    const vacations = safeEvents.filter(e => e.extendedProps?.type === 'vacation');
+                    const absences = safeEvents.filter(e => e.extendedProps?.type === 'absence');
 
                     return (
                       <>

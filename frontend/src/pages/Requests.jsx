@@ -26,8 +26,8 @@ function Requests() {
         axios.get(`${API_URL}/requests/vacations`),
         axios.get(`${API_URL}/requests/absences`)
       ]);
-      setVacations(vacRes.data);
-      setAbsences(absRes.data);
+      setVacations(Array.isArray(vacRes.data) ? vacRes.data : []);
+      setAbsences(Array.isArray(absRes.data) ? absRes.data : []);
     } catch (error) {
       console.error(error);
     } finally {

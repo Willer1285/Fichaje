@@ -227,12 +227,15 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Teléfonos</label>
                                     {formData.telefonos.map((tel, idx) => (
                                         <div key={idx} className="flex gap-2 mb-2">
-                                            <input 
-                                                type="tel" 
-                                                className="input-field" 
+                                            <input
+                                                type="tel"
+                                                className="input-field"
                                                 value={tel}
                                                 onChange={e => handlePhoneChange(idx, e.target.value)}
                                                 placeholder="+34 600 000 000"
+                                                pattern="[\+]?[0-9\s\-\(\)]+"
+                                                maxLength={20}
+                                                title="Formato: +34 600 000 000"
                                             />
                                             {idx === formData.telefonos.length - 1 ? (
                                                 <button type="button" onClick={addPhone} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"><Plus size={18} /></button>

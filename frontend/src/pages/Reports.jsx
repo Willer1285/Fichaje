@@ -27,8 +27,9 @@ function Reports() {
   const fetchEmployees = async () => {
     try {
       const res = await axios.get(`${API_URL}/employees`);
-      setEmployees(res.data);
-      if (res.data.length > 0) setSelectedEmployee(res.data[0].id);
+      const employeesData = Array.isArray(res.data) ? res.data : [];
+      setEmployees(employeesData);
+      if (employeesData.length > 0) setSelectedEmployee(employeesData[0].id);
     } catch (err) {
       console.error("Error loading employees", err);
     }

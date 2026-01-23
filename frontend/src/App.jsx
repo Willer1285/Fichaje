@@ -97,16 +97,18 @@ function App() {
       setStats(statsRes.data);
 
       const checkinsRes = await axios.get(`${API_URL}/attendance/today`);
-      setRecentCheckins(checkinsRes.data);
+      setRecentCheckins(Array.isArray(checkinsRes.data) ? checkinsRes.data : []);
 
       const notifsRes = await axios.get(`${API_URL}/notifications/admin`);
-      setNotifications(notifsRes.data);
-      
+      setNotifications(Array.isArray(notifsRes.data) ? notifsRes.data : []);
+
       const alertsRes = await axios.get(`${API_URL}/notifications/alerts`);
       // Filtrar alertas que el usuario ya eliminó
       const deletedAlerts = JSON.parse(localStorage.getItem('deletedAlerts') || '[]');
       const deletedIds = deletedAlerts.map(item => item.id);
-      const filteredAlerts = alertsRes.data.filter(alert => !deletedIds.includes(alert.id));
+      const filteredAlerts = Array.isArray(alertsRes.data)
+        ? alertsRes.data.filter(alert => !deletedIds.includes(alert.id))
+        : [];
       setDashboardAlerts(filteredAlerts);
       
     } catch (error) {

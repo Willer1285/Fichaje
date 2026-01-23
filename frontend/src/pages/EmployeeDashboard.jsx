@@ -91,7 +91,7 @@ function EmployeeDashboard({ user, onLogout }) {
   const fetchNotifications = async () => {
     try {
         const res = await axios.get(`${API_URL}/notifications/employee/${user.id}`);
-        setNotifications(res.data);
+        setNotifications(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
         console.error("Error fetching notifications", err);
     }
@@ -102,9 +102,9 @@ function EmployeeDashboard({ user, onLogout }) {
       const year = new Date().getFullYear();
       const balanceRes = await axios.get(`${API_URL}/requests/employee/${user.id}/vacation-balance/${year}`);
       setVacationBalance(balanceRes.data);
-      
+
       const historyRes = await axios.get(`${API_URL}/requests/employee/${user.id}/vacations`);
-      setVacationHistory(historyRes.data);
+      setVacationHistory(Array.isArray(historyRes.data) ? historyRes.data : []);
     } catch (err) {
       console.error(err);
     }
@@ -113,7 +113,7 @@ function EmployeeDashboard({ user, onLogout }) {
   const fetchAbsenceData = async () => {
     try {
       const res = await axios.get(`${API_URL}/requests/employee/${user.id}/absences`);
-      setAbsenceHistory(res.data.history);
+      setAbsenceHistory(Array.isArray(res.data.history) ? res.data.history : []);
     } catch (err) {
       console.error(err);
     }

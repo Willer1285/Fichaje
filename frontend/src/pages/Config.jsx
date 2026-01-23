@@ -250,7 +250,7 @@ function SecuritySettings() {
         permitir_llegadas_tarde: true
     });
     const [loading, setLoading] = useState(false);
-    const [msg, setMsg] = useState({ text: '', type: '' });
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         axios.get(`${API_URL}/config`).then(res => setConfig(res.data));
@@ -259,21 +259,21 @@ function SecuritySettings() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setMsg({ text: '', type: '' });
+        setToast(null);
         try {
             const formData = new FormData();
             formData.append('clave_aprobacion_horas_extras', config.clave_aprobacion_horas_extras);
             formData.append('tiempo_tolerancia_minutos', config.tiempo_tolerancia_minutos);
             formData.append('permitir_llegadas_tarde', config.permitir_llegadas_tarde);
-            
+
             await axios.put(`${API_URL}/config`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            setMsg({ text: 'Configuración actualizada', type: 'success' });
+            setToast({ message: 'Configuración actualizada', type: 'success' });
         } catch (err) {
             console.error(err);
-            setMsg({ text: 'Error al guardar', type: 'error' });
+            setToast({ message: 'Error al guardar', type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -545,7 +545,9 @@ function SchedulesManager() {
     const handleEdit = (schedule) => {
         setCurrentSchedule({
             ...schedule,
-            dias_semana: schedule.dias_semana.split(',')
+            dias_semana: Array.isArray(schedule.dias_semana)
+                ? schedule.dias_semana
+                : (schedule.dias_semana ? schedule.dias_semana.split(',') : [])
         });
         setIsEditing(true);
     };

@@ -94,10 +94,10 @@ function Employees() {
     setShowFormModal(true);
   };
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.dni.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEmployees = employees.filter(emp =>
+    emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.apellidos?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.dni?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
