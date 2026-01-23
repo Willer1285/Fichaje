@@ -89,6 +89,11 @@ def update_config(
         # Nota: Si el frontend envía string "null" o vacío para borrar, hay que manejarlo.
         # Aquí asumimos que se envía el valor actual si no se cambia.
         
+        # Log para debugging
+        import logging
+        logging.info(f"Actualizando config - slogan recibido: {slogan}, moneda recibida: {moneda}")
+
+        # Actualizar campos - acepta strings vacíos como válidos para permitir borrar campos
         if nombre_aplicacion is not None: config.nombre_aplicacion = nombre_aplicacion
         if slogan is not None: config.slogan = slogan
         if nombre_empresa is not None: config.nombre_empresa = nombre_empresa
@@ -106,6 +111,8 @@ def update_config(
         if tiempo_tolerancia_minutos is not None: config.tiempo_tolerancia_minutos = tiempo_tolerancia_minutos
         if zona_horaria is not None: config.zona_horaria = zona_horaria
         if moneda is not None: config.moneda = moneda
+
+        logging.info(f"Config después de actualizar - slogan: {config.slogan}, moneda: {config.moneda}")
         
         # Procesar archivos
         if logo:

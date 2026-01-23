@@ -49,26 +49,21 @@ app.include_router(calendar.router)
 def health_check():
     return {"status": "ok"}
 
-# SPA Fallback - Servir index.html para cualquier ruta no capturada por la API
-# IMPORTANTE: Este catch-all NO debe interferir con las rutas de la API
-@app.api_route("/{full_path:path}", methods=["GET"])
-async def serve_frontend(full_path: str):
-    # Si la ruta comienza con api/, no servir el frontend
-    # Esto permite que FastAPI maneje correctamente los 404 de la API
-    if full_path.startswith("api/") or full_path == "api":
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Not Found")
+# SPA Fallback - Solo para rutas que NO son API
+# Servir index.html para todas las rutas del frontend (SPA routing)
+# Esto NO interfiere con /api/* porque esas rutas ya están registradas arriba
+@app.exception_handler(404)
+async def custom_404_handler(request, __):
+    # Si la ruta es de API, devolver JSON 404
+    if request.url.path.startswith("/api/"):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
-    # Servir archivos estáticos raíz si existen (favicon, etc)
-    if os.path.exists(frontend_path):
-        potential_file = os.path.join(frontend_path, full_path)
-        if os.path.exists(potential_file) and os.path.isfile(potential_file):
-            return FileResponse(potential_file)
+    # Para cualquier otra ruta, servir el index.html del SPA
+    index_path = os.path.join(frontend_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
 
-        # Si no, servir index.html para SPA routing
-        index_path = os.path.join(frontend_path, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-
-    # Fallback si no existe frontend
-    return {"message": "Frontend not built"}
+    # Si no existe el frontend, devolver mensaje
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=404, content={"message": "Frontend not built"})
