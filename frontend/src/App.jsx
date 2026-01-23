@@ -87,8 +87,9 @@ function App() {
     loadUser();
 
     // Escuchar cambios en localStorage (cuando se actualiza el perfil)
-    window.addEventListener('storage', loadUser);
-    return () => window.removeEventListener('storage', loadUser);
+    // Usamos evento personalizado 'userUpdated' porque 'storage' solo funciona entre tabs
+    window.addEventListener('userUpdated', loadUser);
+    return () => window.removeEventListener('userUpdated', loadUser);
   }, []);
 
   // Cargar datos del dashboard

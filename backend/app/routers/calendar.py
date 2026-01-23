@@ -42,7 +42,7 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
             events.append({
                 "id": f"fichaje_{fichaje.id}",
                 "title": title,
-                "start": fichaje.fecha.isoformat(),
+                "start": fichaje.fecha.date().isoformat() if hasattr(fichaje.fecha, 'date') else fichaje.fecha.isoformat(),
                 "allDay": True,
                 "backgroundColor": color,
                 "borderColor": color,

@@ -668,13 +668,13 @@ class DatabaseManager:
             # Pero probemos primero con los objetos directos y loggeando el count
             
             cursor.execute("""
-                SELECT f.*, e.nombre, e.apellidos, e.numero_empleado, e.tipo_jornada, e.turno_id, e.departamento_id
+                SELECT f.*, e.nombre, e.apellidos, e.dni, e.numero_empleado, e.tipo_jornada, e.turno_id, e.departamento_id
                 FROM fichajes f
                 JOIN empleados e ON f.empleado_id = e.id
                 WHERE f.fecha >= ? AND f.fecha <= ?
                 ORDER BY f.fecha DESC, e.apellidos, e.nombre
             """, (fecha_inicio, fecha_fin))
-            
+
             rows = cursor.fetchall()
             # print(f"DEBUG: Fichajes encontrados: {len(rows)}")
 
@@ -686,7 +686,7 @@ class DatabaseManager:
                     turno_id = row['turno_id']
                 except:
                     turno_id = None
-                
+
                 try:
                     dept_id = row['departamento_id']
                 except:
@@ -696,6 +696,7 @@ class DatabaseManager:
                     id=fichaje.empleado_id,
                     nombre=row['nombre'],
                     apellidos=row['apellidos'],
+                    dni=row['dni'],
                     numero_empleado=row['numero_empleado'],
                     tipo_jornada=row['tipo_jornada'],
                     turno_id=turno_id,

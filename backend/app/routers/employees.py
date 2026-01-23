@@ -16,6 +16,12 @@ router = APIRouter(
 # Esquemas Pydantic para respuesta
 class EmployeeResponse(BaseModel):
     id: int
+    # Campos de nombre separados
+    primer_nombre: str = ""
+    segundo_nombre: str = ""
+    primer_apellido: str = ""
+    segundo_apellido: str = ""
+    # Campos legacy (calculados automáticamente)
     nombre: str
     apellidos: str
     dni: str
@@ -45,6 +51,10 @@ def read_employees(db = Depends(get_db)):
         return [
             {
                 "id": e.id,
+                "primer_nombre": e.primer_nombre or "",
+                "segundo_nombre": e.segundo_nombre or "",
+                "primer_apellido": e.primer_apellido or "",
+                "segundo_apellido": e.segundo_apellido or "",
                 "nombre": e.nombre,
                 "apellidos": e.apellidos,
                 "dni": e.dni,

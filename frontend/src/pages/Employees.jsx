@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, Plus, Edit2, Trash2, Shield, User, Phone, Mail, Eye, X } from 'lucide-react';
 import { TypeSelectionModal, EmployeeFormModal, EmployeeCardModal } from '../components/EmployeeModals';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { AlertDialog } from '../components/AlertDialog';
 
 const API_URL = "/api";
 
@@ -9,15 +11,19 @@ function Employees() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modales
   const [showTypeSelection, setShowTypeSelection] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  
+
   const [formType, setFormType] = useState('employee'); // 'employee' or 'admin'
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewEmployee, setViewEmployee] = useState(null);
+
+  // Diálogos personalizados
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, employeeId: null });
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, message: '' });
 
   // Catálogos
   const [departments, setDepartments] = useState([]);
@@ -65,14 +71,19 @@ function Employees() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("¿Estás seguro de eliminar este empleado?")) {
-      try {
-        await axios.delete(`${API_URL}/employees/${id}`);
-        fetchEmployees();
-      } catch (error) {
-        alert("Error al eliminar: " + (error.response?.data?.detail || error.message));
-      }
+  const handleDelete = (id) => {
+    setConfirmDialog({ isOpen: true, employeeId: id });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`${API_URL}/employees/${confirmDialog.employeeId}`);
+      fetchEmployees();
+    } catch (error) {
+      setAlertDialog({
+        isOpen: true,
+        message: "Error al eliminar: " + (error.response?.data?.detail || error.message)
+      });
     }
   };
 
@@ -274,7 +285,7 @@ function Employees() {
                   const res = await axios.get(`${API_URL}/employees/${editingEmployee.id}`);
                   const updatedUser = { ...currentUser, ...res.data };
                   localStorage.setItem('user', JSON.stringify(updatedUser));
-                  window.dispatchEvent(new Event('storage')); // Trigger update
+                  window.dispatchEvent(new Event('userUpdated')); // Trigger sidebar update
                 } catch (err) {
                   console.error('Error actualizando usuario en localStorage:', err);
                 }
@@ -292,6 +303,26 @@ function Employees() {
             catalogs={{ departments, locations, schedules }}
           />
       )}
+
+      {/* Diálogo de Confirmación */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, employeeId: null })}
+        onConfirm={confirmDelete}
+        title="¿Eliminar empleado?"
+        message="¿Estás seguro de eliminar este empleado? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
+
+      {/* Diálogo de Alerta */}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ isOpen: false, message: '' })}
+        message={alertDialog.message}
+        variant="error"
+      />
     </div>
   );
 }

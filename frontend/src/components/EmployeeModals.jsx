@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, User, Shield, Camera, Phone, Trash2, DollarSign, LogOut, Plus, Briefcase, Mail } from 'lucide-react';
+import { AlertDialog } from './AlertDialog';
 
 const API_URL = "/api";
 
@@ -51,6 +52,7 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
     const [activeTab, setActiveTab] = useState(0);
     const [loading, setLoading] = useState(false);
     const [photoPreview, setPhotoPreview] = useState(null);
+    const [alertDialog, setAlertDialog] = useState({ isOpen: false, message: '' });
 
     // Parsear telefonos si viene de BD
     const initialPhones = employee?.telefono ? (
@@ -162,7 +164,10 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
             if(onSuccess) onSuccess();
             onClose();
         } catch (error) {
-            alert("Error: " + (error.response?.data?.detail || error.message));
+            setAlertDialog({
+                isOpen: true,
+                message: "Error: " + (error.response?.data?.detail || error.message)
+            });
         } finally {
             setLoading(false);
         }
@@ -211,8 +216,9 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                                     {photoPreview ? (
                                         <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
-                                            <User size={48} />
+                                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-4xl">
+                                            {(formData.primer_nombre?.charAt(0) || formData.nombre?.charAt(0) || '').toUpperCase()}
+                                            {(formData.primer_apellido?.charAt(0) || formData.apellidos?.charAt(0) || '').toUpperCase()}
                                         </div>
                                     )}
                                     <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white font-medium">
@@ -388,6 +394,14 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                     </button>
                 </div>
             </div>
+
+            {/* Diálogo de Alerta */}
+            <AlertDialog
+                isOpen={alertDialog.isOpen}
+                onClose={() => setAlertDialog({ isOpen: false, message: '' })}
+                message={alertDialog.message}
+                variant="error"
+            />
         </div>
     );
 }
