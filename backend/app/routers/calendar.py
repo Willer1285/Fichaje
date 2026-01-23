@@ -96,7 +96,7 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                         'vacaciones_anuales': 'Vacaciones',
                         'permiso_retribuido': 'Permiso Retribuido',
                         'permiso_sin_sueldo': 'Permiso Sin Sueldo'
-                    }.get(v.tipo_solicitud, 'Vacaciones')
+                    }.get(v.tipo, 'Vacaciones')
 
                     events.append({
                         "id": f"vac_{v.id}",
@@ -110,9 +110,9 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                             "type": "vacation",
                             "employee": f"{emp.nombre} {emp.apellidos}",
                             "estado": v.estado,
-                            "tipo_solicitud": v.tipo_solicitud,
+                            "tipo": v.tipo,
                             "subtipo": v.subtipo or "N/A",
-                            "motivo": v.motivo or ""
+                            "motivo": v.motivo_empleado or ""
                         }
                     })
             

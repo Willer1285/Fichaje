@@ -322,3 +322,52 @@ def delete_employee(employee_id: int, db = Depends(get_db)):
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/migrate-names")
+def migrate_employee_names(db = Depends(get_db)):
+    """
+    Migra los nombres y apellidos existentes a los campos separados.
+    Divide 'nombre' en primer_nombre y segundo_nombre.
+    Divide 'apellidos' en primer_apellido y segundo_apellido.
+    """
+    try:
+        print("\n🔄 [MIGRACIÓN] Iniciando migración de nombres...")
+        employees = db.listar_empleados(incluir_inactivos=True)
+        migrated_count = 0
+
+        for emp in employees:
+            # Solo migrar si los campos separados están vacíos
+            if not emp.primer_nombre and not emp.primer_apellido:
+                # Dividir nombres
+                nombres = emp.nombre.strip().split() if emp.nombre else []
+                apellidos = emp.apellidos.strip().split() if emp.apellidos else []
+
+                # Asignar nombres
+                primer_nombre = nombres[0] if len(nombres) > 0 else ""
+                segundo_nombre = " ".join(nombres[1:]) if len(nombres) > 1 else ""
+
+                # Asignar apellidos
+                primer_apellido = apellidos[0] if len(apellidos) > 0 else ""
+                segundo_apellido = " ".join(apellidos[1:]) if len(apellidos) > 1 else ""
+
+                # Actualizar empleado
+                emp.primer_nombre = primer_nombre
+                emp.segundo_nombre = segundo_nombre
+                emp.primer_apellido = primer_apellido
+                emp.segundo_apellido = segundo_apellido
+
+                db.actualizar_empleado(emp)
+                migrated_count += 1
+
+                print(f"   ✅ Migrado: {emp.nombre} {emp.apellidos} -> {primer_nombre}|{segundo_nombre}|{primer_apellido}|{segundo_apellido}")
+
+        print(f"🎉 [MIGRACIÓN] Completada: {migrated_count} empleados migrados")
+        return {
+            "message": "Migración completada",
+            "migrated_count": migrated_count
+        }
+
+    except Exception as e:
+        print(f"❌ [MIGRACIÓN] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
