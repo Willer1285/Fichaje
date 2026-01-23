@@ -195,22 +195,25 @@ def get_dashboard_alerts(db = Depends(get_db)):
                     hora_esperada_str = "Hora desconocida"
                     mostrar_alerta = True
 
-                    if emp.turno_id and emp.turno_id in turnos:
+                    # No mostrar alerta si el empleado no tiene horario configurado
+                    if not emp.turno_id or emp.turno_id not in turnos:
+                        mostrar_alerta = False
+                    elif emp.turno_id and emp.turno_id in turnos:
                         turno = turnos[emp.turno_id]
                         hora_esperada_str = turno.hora_inicio
-                        
+
                         try:
                             # Validar tolerancia de 2 horas para marcar ausencia
                             h, m = map(int, turno.hora_inicio.split(":"))
                             hora_inicio_turno = hoy.replace(hour=h, minute=m, second=0, microsecond=0)
-                            
+
                             # Si el turno es más tarde en el día
                             if hoy < hora_inicio_turno:
                                 mostrar_alerta = False
                             else:
                                 # Han pasado menos de 2 horas (7200 segundos)
                                 diferencia = (hoy - hora_inicio_turno).total_seconds()
-                                if diferencia < 7200: 
+                                if diferencia < 7200:
                                     mostrar_alerta = False
                         except:
                             pass
