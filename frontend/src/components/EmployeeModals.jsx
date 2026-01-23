@@ -73,6 +73,7 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
         es_admin: type === 'admin',
         password: '',
         foto: null,
+        eliminar_foto: false,
         // Campos de egreso
         es_egresado: employee ? !employee.active : false,
         fecha_egreso: employee?.fecha_egreso ? employee.fecha_egreso.split('T')[0] : '',
@@ -134,6 +135,7 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
         data.append('es_admin', formData.es_admin);
         if (formData.password) data.append('password', formData.password);
         if (formData.foto) data.append('foto', formData.foto);
+        if (formData.eliminar_foto) data.append('eliminar_foto', 'true');
 
         if (isEdit) {
             data.append('es_egresado', formData.es_egresado);
@@ -210,6 +212,18 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                                         <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
                                     </label>
                                 </div>
+                                {photoPreview && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPhotoPreview(null);
+                                            setFormData({...formData, foto: null, eliminar_foto: true});
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors text-sm font-medium"
+                                    >
+                                        <Trash2 size={16} /> Eliminar foto
+                                    </button>
+                                )}
                                 <p className="text-xs text-center text-slate-400 w-40">Formato JPG/PNG. Máx 2MB.<br/>Se detectará y recortará el rostro automáticamente.</p>
                             </div>
 

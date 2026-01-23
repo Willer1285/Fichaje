@@ -199,18 +199,22 @@ async def update_employee(
     fecha_egreso: Optional[str] = Form(None),
     motivo_egreso: str = Form(""),
     foto: UploadFile = File(None),
+    eliminar_foto: bool = Form(False),
     db = Depends(get_db)
 ):
     """Actualiza un empleado"""
     existing_emp = db.obtener_empleado(employee_id)
     if not existing_emp:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
-    
+
+    # Eliminar foto si se solicita
+    if eliminar_foto:
+        existing_emp.foto_path = ""
+
     # Procesar nueva foto si se envía
     if foto:
         try:
             contents = await foto.read()
-            # Eliminar foto anterior si existe? (Pendiente limpieza)
             existing_emp.foto_path = process_employee_photo(contents)
         except Exception as e:
             print(f"Error actualizando foto: {e}")

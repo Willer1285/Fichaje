@@ -26,8 +26,14 @@ class Ubicacion:
 class Employee:
     """Modelo de empleado"""
     id: Optional[int] = None
-    nombre: str = ""
-    apellidos: str = ""
+    # Campos de nombre separados
+    primer_nombre: str = ""
+    segundo_nombre: str = ""
+    primer_apellido: str = ""
+    segundo_apellido: str = ""
+    # Campos legacy (se mantienen por compatibilidad, se calculan automáticamente)
+    nombre: str = ""  # Se calcula como: primer_nombre + segundo_nombre
+    apellidos: str = ""  # Se calcula como: primer_apellido + segundo_apellido
     dni: str = ""
     telefono: str = ""  # JSON list de teléfonos o string separado por comas
     email: str = ""  # Correo electrónico

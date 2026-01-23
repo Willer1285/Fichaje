@@ -295,6 +295,16 @@ class DatabaseManager:
             if 'turno_id' not in columns:
                 cursor.execute("ALTER TABLE empleados ADD COLUMN turno_id INTEGER REFERENCES turnos(id)")
 
+            # Migración: Campos de nombre separados
+            if 'primer_nombre' not in columns:
+                cursor.execute("ALTER TABLE empleados ADD COLUMN primer_nombre TEXT DEFAULT ''")
+            if 'segundo_nombre' not in columns:
+                cursor.execute("ALTER TABLE empleados ADD COLUMN segundo_nombre TEXT DEFAULT ''")
+            if 'primer_apellido' not in columns:
+                cursor.execute("ALTER TABLE empleados ADD COLUMN primer_apellido TEXT DEFAULT ''")
+            if 'segundo_apellido' not in columns:
+                cursor.execute("ALTER TABLE empleados ADD COLUMN segundo_apellido TEXT DEFAULT ''")
+
             # Tabla de solicitudes de vacaciones - Cumple con Art. 38 ET
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS solicitudes_vacaciones (

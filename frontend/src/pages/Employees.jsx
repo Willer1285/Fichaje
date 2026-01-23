@@ -146,10 +146,10 @@ function Employees() {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {emp.foto_path ? (
-                        <img src={`${API_URL.replace('/api', '')}${emp.foto_path}`} className="w-10 h-10 rounded-full object-cover shadow-sm border border-white" alt="" />
+                        <img src={`${API_URL.replace('/api', '')}${emp.foto_path}`} className="w-10 h-10 rounded-full object-cover shadow-sm border border-white flex-shrink-0" alt="" />
                     ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">
-                        {(emp.nombre && emp.nombre.charAt(0))}{(emp.apellidos && emp.apellidos.charAt(0))}
+                        <div className="w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-sm flex-shrink-0 text-sm">
+                        {(emp.nombre?.charAt(0) || '')}{(emp.apellidos?.charAt(0) || '')}
                         </div>
                     )}
                     <div>
@@ -254,14 +254,30 @@ function Employees() {
 
       {/* Modal Formulario */}
       {showFormModal && (
-        <EmployeeFormModal 
-            isOpen={showFormModal} 
-            onClose={() => setShowFormModal(false)} 
-            type={formType} 
+        <EmployeeFormModal
+            isOpen={showFormModal}
+            onClose={() => setShowFormModal(false)}
+            type={formType}
             employee={editingEmployee}
             catalogs={{ departments, locations, schedules }}
             config={config}
-            onSuccess={() => { setShowFormModal(false); fetchEmployees(); }}
+            onSuccess={async () => {
+              setShowFormModal(false);
+              await fetchEmployees();
+
+              // Si el empleado editado es el usuario actual, actualizar localStorage
+              const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+              if (editingEmployee && currentUser.id === editingEmployee.id) {
+                try {
+                  const res = await axios.get(`${API_URL}/employees/${editingEmployee.id}`);
+                  const updatedUser = { ...currentUser, ...res.data };
+                  localStorage.setItem('user', JSON.stringify(updatedUser));
+                  window.dispatchEvent(new Event('storage')); // Trigger update
+                } catch (err) {
+                  console.error('Error actualizando usuario en localStorage:', err);
+                }
+              }
+            }}
         />
       )}
 

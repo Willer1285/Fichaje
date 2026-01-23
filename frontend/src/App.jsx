@@ -75,12 +75,20 @@ function App() {
     loadConfig();
   }, []);
 
-  // Verificar sesión
+  // Verificar sesión y escuchar cambios en usuario
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const loadUser = () => {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    };
+
+    loadUser();
+
+    // Escuchar cambios en localStorage (cuando se actualiza el perfil)
+    window.addEventListener('storage', loadUser);
+    return () => window.removeEventListener('storage', loadUser);
   }, []);
 
   // Cargar datos del dashboard
