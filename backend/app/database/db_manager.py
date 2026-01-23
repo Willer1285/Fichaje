@@ -473,12 +473,15 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO empleados
-                (nombre, apellidos, dni, telefono, email, foto_path, numero_empleado, cargo,
+                (primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+                 nombre, apellidos, dni, telefono, email, foto_path, numero_empleado, cargo,
                  departamento_id, ubicacion_id, turno_id, pago_por_hora, pago_hora_especial,
                  tipo_jornada, es_admin, es_superadmin, password_hash, fecha_alta, fecha_ingreso, activo,
                  fecha_egreso, motivo_egreso)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
+                empleado.primer_nombre, empleado.segundo_nombre,
+                empleado.primer_apellido, empleado.segundo_apellido,
                 empleado.nombre, empleado.apellidos, empleado.dni,
                 empleado.telefono, empleado.email, empleado.foto_path,
                 empleado.numero_empleado, empleado.cargo,
@@ -527,13 +530,16 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE empleados
-                SET nombre = ?, apellidos = ?, dni = ?, telefono = ?, email = ?, foto_path = ?,
+                SET primer_nombre = ?, segundo_nombre = ?, primer_apellido = ?, segundo_apellido = ?,
+                    nombre = ?, apellidos = ?, dni = ?, telefono = ?, email = ?, foto_path = ?,
                     numero_empleado = ?, cargo = ?, departamento_id = ?, ubicacion_id = ?, turno_id = ?,
                     pago_por_hora = ?, pago_hora_especial = ?, tipo_jornada = ?,
                     es_admin = ?, es_superadmin = ?, fecha_ingreso = ?,
                     activo = ?, fecha_egreso = ?, motivo_egreso = ?
                 WHERE id = ?
             """, (
+                empleado.primer_nombre, empleado.segundo_nombre,
+                empleado.primer_apellido, empleado.segundo_apellido,
                 empleado.nombre, empleado.apellidos, empleado.dni,
                 empleado.telefono, empleado.email, empleado.foto_path,
                 empleado.numero_empleado, empleado.cargo,

@@ -79,6 +79,10 @@ def read_employee(employee_id: int, db = Depends(get_db)):
         
     return {
         "id": e.id,
+        "primer_nombre": e.primer_nombre or "",
+        "segundo_nombre": e.segundo_nombre or "",
+        "primer_apellido": e.primer_apellido or "",
+        "segundo_apellido": e.segundo_apellido or "",
         "nombre": e.nombre,
         "apellidos": e.apellidos,
         "dni": e.dni,
@@ -103,8 +107,10 @@ def read_employee(employee_id: int, db = Depends(get_db)):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_employee(
-    nombre: str = Form(...),
-    apellidos: str = Form(...),
+    primer_nombre: str = Form(...),
+    segundo_nombre: str = Form(""),
+    primer_apellido: str = Form(...),
+    segundo_apellido: str = Form(""),
     dni: str = Form(...),
     telefono: str = Form(...), # Puede venir como JSON string "[...]"
     email: str = Form(""),
@@ -149,9 +155,17 @@ async def create_employee(
              raise HTTPException(status_code=400, detail="La contraseña es obligatoria para administradores")
         final_password = password
     
+    # Calcular nombre completo y apellidos desde campos separados
+    nombre_completo = f"{primer_nombre} {segundo_nombre}".strip()
+    apellidos_completo = f"{primer_apellido} {segundo_apellido}".strip()
+
     new_emp = Employee(
-        nombre=nombre,
-        apellidos=apellidos,
+        primer_nombre=primer_nombre,
+        segundo_nombre=segundo_nombre,
+        primer_apellido=primer_apellido,
+        segundo_apellido=segundo_apellido,
+        nombre=nombre_completo,
+        apellidos=apellidos_completo,
         dni=dni,
         telefono=telefono,
         email=email,
@@ -180,8 +194,10 @@ async def create_employee(
 @router.put("/{employee_id}")
 async def update_employee(
     employee_id: int,
-    nombre: str = Form(...),
-    apellidos: str = Form(...),
+    primer_nombre: str = Form(...),
+    segundo_nombre: str = Form(""),
+    primer_apellido: str = Form(...),
+    segundo_apellido: str = Form(""),
     dni: str = Form(...),
     telefono: str = Form(...),
     email: str = Form(""),
@@ -219,8 +235,14 @@ async def update_employee(
         except Exception as e:
             print(f"Error actualizando foto: {e}")
 
-    existing_emp.nombre = nombre
-    existing_emp.apellidos = apellidos
+    # Actualizar campos de nombre separados y calcular nombre completo
+    existing_emp.primer_nombre = primer_nombre
+    existing_emp.segundo_nombre = segundo_nombre
+    existing_emp.primer_apellido = primer_apellido
+    existing_emp.segundo_apellido = segundo_apellido
+    existing_emp.nombre = f"{primer_nombre} {segundo_nombre}".strip()
+    existing_emp.apellidos = f"{primer_apellido} {segundo_apellido}".strip()
+
     existing_emp.dni = dni
     existing_emp.telefono = telefono
     existing_emp.email = email

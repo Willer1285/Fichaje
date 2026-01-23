@@ -770,18 +770,27 @@ function App() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {recentCheckins.map((checkin) => (
-                            <TableRow
-                              key={checkin.id}
-                              name={checkin.empleado_nombre}
-                              employeeNumber={checkin.numero_empleado || checkin.empleado_id}
-                              photoPath={checkin.foto_path}
-                              dept={checkin.departamento}
-                              inTime={checkin.hora_entrada || "--:--"}
-                              outTime={checkin.hora_salida || "--:--"}
-                              status={checkin.estado}
-                            />
-                          ))}
+                          {recentCheckins.map((checkin) => {
+                            // Extraer solo primer nombre y primer apellido
+                            const nombreCompleto = checkin.empleado_nombre || '';
+                            const partes = nombreCompleto.split(' ');
+                            const primerNombre = partes[0] || '';
+                            const primerApellido = partes[partes.length > 1 ? Math.floor(partes.length / 2) : 0] || '';
+                            const nombreCorto = `${primerNombre} ${primerApellido}`.trim();
+
+                            return (
+                              <TableRow
+                                key={checkin.id}
+                                name={nombreCorto || nombreCompleto}
+                                employeeNumber={checkin.numero_empleado || checkin.empleado_id}
+                                photoPath={checkin.foto_path}
+                                dept={checkin.departamento}
+                                inTime={checkin.hora_entrada || "--:--"}
+                                outTime={checkin.hora_salida || "--:--"}
+                                status={checkin.estado}
+                              />
+                            );
+                          })}
                         </tbody>
                       </table>
                     )}

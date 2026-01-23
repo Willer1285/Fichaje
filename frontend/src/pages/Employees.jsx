@@ -153,7 +153,9 @@ function Employees() {
                         </div>
                     )}
                     <div>
-                      <p className="font-bold text-slate-800 text-sm">{emp.nombre} {emp.apellidos}</p>
+                      <p className="font-bold text-slate-800 text-sm">
+                        {emp.primer_nombre || emp.nombre?.split(' ')[0] || emp.nombre} {emp.primer_apellido || emp.apellidos?.split(' ')[0] || emp.apellidos}
+                      </p>
                       <p className="text-xs text-slate-400 font-mono">{emp.dni}</p>
                     </div>
                   </div>

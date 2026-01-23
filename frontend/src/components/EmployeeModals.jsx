@@ -58,6 +58,11 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
     ) : [''];
 
     const [formData, setFormData] = useState({
+        primer_nombre: employee?.primer_nombre || '',
+        segundo_nombre: employee?.segundo_nombre || '',
+        primer_apellido: employee?.primer_apellido || '',
+        segundo_apellido: employee?.segundo_apellido || '',
+        // Legacy - se calculan automáticamente
         nombre: employee?.nombre || '',
         apellidos: employee?.apellidos || '',
         dni: employee?.dni || '',
@@ -115,9 +120,12 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
         setLoading(true);
 
         const data = new FormData();
+        // Campos de nombre separados
+        data.append('primer_nombre', formData.primer_nombre);
+        data.append('segundo_nombre', formData.segundo_nombre);
+        data.append('primer_apellido', formData.primer_apellido);
+        data.append('segundo_apellido', formData.segundo_apellido);
         // Campos básicos
-        data.append('nombre', formData.nombre);
-        data.append('apellidos', formData.apellidos);
         data.append('dni', formData.dni);
         data.append('telefono', JSON.stringify(formData.telefonos.filter(t => t.trim()))); // Enviar como JSON string
         data.append('email', formData.email);
@@ -230,8 +238,32 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                             {/* Datos Básicos */}
                             <div className="flex-1 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Input label="Nombres" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} required />
-                                    <Input label="Apellidos" value={formData.apellidos} onChange={e => setFormData({...formData, apellidos: e.target.value})} required />
+                                    <Input
+                                        label="Primer Nombre"
+                                        value={formData.primer_nombre}
+                                        onChange={e => setFormData({...formData, primer_nombre: e.target.value})}
+                                        required
+                                    />
+                                    <Input
+                                        label="Segundo Nombre"
+                                        value={formData.segundo_nombre}
+                                        onChange={e => setFormData({...formData, segundo_nombre: e.target.value})}
+                                        placeholder="Opcional"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input
+                                        label="Primer Apellido"
+                                        value={formData.primer_apellido}
+                                        onChange={e => setFormData({...formData, primer_apellido: e.target.value})}
+                                        required
+                                    />
+                                    <Input
+                                        label="Segundo Apellido"
+                                        value={formData.segundo_apellido}
+                                        onChange={e => setFormData({...formData, segundo_apellido: e.target.value})}
+                                        placeholder="Opcional"
+                                    />
                                 </div>
                                 <Input label="DNI / NIE" value={formData.dni} onChange={e => setFormData({...formData, dni: e.target.value})} required placeholder="12345678A" />
                                 <Input label="Correo Electrónico" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="email@empresa.com" />
