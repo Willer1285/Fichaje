@@ -50,16 +50,25 @@ def health_check():
     return {"status": "ok"}
 
 # SPA Fallback - Servir index.html para cualquier ruta no capturada por la API
-@app.get("/{full_path:path}")
+# IMPORTANTE: Este catch-all NO debe interferir con las rutas de la API
+@app.api_route("/{full_path:path}", methods=["GET"])
 async def serve_frontend(full_path: str):
-    # Si la ruta comienza con /api, dejar que FastAPI maneje el 404 si no existe
-    if full_path.startswith("api"):
-        return {"detail": "Not Found"}
-    
-    # Servir archivos estáticos raíz si existen (favicon, etc)
-    potential_file = os.path.join(frontend_path, full_path)
-    if os.path.exists(potential_file) and os.path.isfile(potential_file):
-        return FileResponse(potential_file)
+    # Si la ruta comienza con api/, no servir el frontend
+    # Esto permite que FastAPI maneje correctamente los 404 de la API
+    if full_path.startswith("api/") or full_path == "api":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Not Found")
 
-    # Si no, servir index.html
-    return FileResponse(os.path.join(frontend_path, "index.html"))
+    # Servir archivos estáticos raíz si existen (favicon, etc)
+    if os.path.exists(frontend_path):
+        potential_file = os.path.join(frontend_path, full_path)
+        if os.path.exists(potential_file) and os.path.isfile(potential_file):
+            return FileResponse(potential_file)
+
+        # Si no, servir index.html para SPA routing
+        index_path = os.path.join(frontend_path, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+
+    # Fallback si no existe frontend
+    return {"message": "Frontend not built"}
