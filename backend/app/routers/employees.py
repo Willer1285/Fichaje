@@ -371,3 +371,39 @@ def migrate_employee_names(db = Depends(get_db)):
     except Exception as e:
         print(f"❌ [MIGRACIÓN] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/verify-names")
+def verify_employee_names(db = Depends(get_db)):
+    """
+    Verifica el estado de los campos de nombres de todos los empleados.
+    Útil para diagnóstico.
+    """
+    try:
+        employees = db.listar_empleados(incluir_inactivos=True)
+        result = []
+
+        for emp in employees:
+            result.append({
+                "id": emp.id,
+                "nombre_completo": f"{emp.nombre} {emp.apellidos}",
+                "campos_separados": {
+                    "primer_nombre": emp.primer_nombre or "[VACÍO]",
+                    "segundo_nombre": emp.segundo_nombre or "[VACÍO]",
+                    "primer_apellido": emp.primer_apellido or "[VACÍO]",
+                    "segundo_apellido": emp.segundo_apellido or "[VACÍO]"
+                },
+                "tiene_campos_vacios": not (emp.primer_nombre and emp.primer_apellido)
+            })
+
+        vacios = sum(1 for r in result if r["tiene_campos_vacios"])
+
+        return {
+            "total_empleados": len(result),
+            "con_campos_vacios": vacios,
+            "con_campos_llenos": len(result) - vacios,
+            "empleados": result
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

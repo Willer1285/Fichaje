@@ -175,7 +175,7 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                             "estado": a.estado,
                             "tipo_ausencia": a.tipo_ausencia,
                             "subtipo": a.subtipo or "N/A",
-                            "motivo": a.motivo or ""
+                            "motivo": a.motivo_empleado or ""
                         }
                     })
 

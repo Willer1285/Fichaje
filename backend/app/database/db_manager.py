@@ -871,6 +871,12 @@ class DatabaseManager:
 
         return Employee(
             id=row['id'],
+            # Campos de nombre separados
+            primer_nombre=get_field('primer_nombre', ""),
+            segundo_nombre=get_field('segundo_nombre', ""),
+            primer_apellido=get_field('primer_apellido', ""),
+            segundo_apellido=get_field('segundo_apellido', ""),
+            # Campos legacy
             nombre=row['nombre'],
             apellidos=row['apellidos'],
             dni=row['dni'],
