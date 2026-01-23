@@ -25,7 +25,7 @@ def get_admin_notifications(db = Depends(get_db)):
         for aus, emp in absences:
             notifs.append({
                 "id": f"aus_{aus.id}",
-                "title": "Ausencia a revisar",
+                "title": "Permiso Anticipado a revisar",
                 "desc": f"{emp.nombre} - {aus.tipo_ausencia}",
                 "time": aus.fecha_registro.strftime("%I:%M %p") if aus.fecha_registro else "",
                 "type": "warning",
@@ -319,13 +319,13 @@ def get_dashboard_alerts(db = Depends(get_db)):
             # 5. AUSENCIAS JUSTIFICADAS registradas HOY
             ausencias = db.obtener_ausencias_empleado(emp.id, incluir_historial=True)
             for ausencia in ausencias:
-                # Ausencias registradas hoy
+                # Permisos registrados hoy
                 if ausencia.fecha_registro and ausencia.fecha_registro.date() == hoy.date():
                     alerts.append({
                         "id": f"absence_registered_{ausencia.id}",
                         "type": "info",
-                        "title": "Ausencia registrada",
-                        "message": f"{emp.nombre} {emp.apellidos} registró ausencia: {ausencia.tipo_ausencia}",
+                        "title": "Permiso Anticipado registrado",
+                        "message": f"{emp.nombre} {emp.apellidos} registró permiso: {ausencia.tipo_ausencia}",
                         "time": ausencia.fecha_registro.strftime("%I:%M %p"),
                         "details": {
                             "empleado": f"{emp.nombre} {emp.apellidos}",

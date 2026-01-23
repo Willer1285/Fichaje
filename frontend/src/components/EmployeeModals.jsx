@@ -264,9 +264,19 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                                     {photoPreview ? (
                                         <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-4xl">
-                                            {(formData.primer_nombre?.charAt(0) || formData.nombre?.charAt(0) || '').toUpperCase()}
-                                            {(formData.primer_apellido?.charAt(0) || formData.apellidos?.charAt(0) || '').toUpperCase()}
+                                        <div className={`w-full h-full flex items-center justify-center ${
+                                            employee
+                                                ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-4xl'
+                                                : 'bg-slate-50 text-slate-300'
+                                        }`}>
+                                            {employee ? (
+                                                <>
+                                                    {(formData.primer_nombre?.charAt(0) || formData.nombre?.charAt(0) || '').toUpperCase()}
+                                                    {(formData.primer_apellido?.charAt(0) || formData.apellidos?.charAt(0) || '').toUpperCase()}
+                                                </>
+                                            ) : (
+                                                <User size={64} strokeWidth={1.5} />
+                                            )}
                                         </div>
                                     )}
                                     <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white font-medium">

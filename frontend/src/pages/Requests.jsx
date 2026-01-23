@@ -131,11 +131,11 @@ function Requests() {
           {vacations.length > 0 && <span className="ml-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{vacations.length}</span>}
           {activeTab === 'vacations' && <div className="absolute bottom-[-5px] left-0 w-full h-1 bg-primary rounded-t-full"></div>}
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('absences')}
           className={`px-6 py-3 font-bold text-sm transition-colors relative ${activeTab === 'absences' ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
         >
-          Ausencias
+          Permisos y Ausencias
           {absences.length > 0 && <span className="ml-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{absences.length}</span>}
           {activeTab === 'absences' && <div className="absolute bottom-[-5px] left-0 w-full h-1 bg-primary rounded-t-full"></div>}
         </button>

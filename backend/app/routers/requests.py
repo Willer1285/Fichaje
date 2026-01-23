@@ -205,7 +205,7 @@ def get_absence_requests(db = Depends(get_db)):
                 "fecha_fin": a.fecha_fin.strftime("%Y-%m-%d"),
                 "tipo_ausencia": a.tipo_ausencia,
                 "motivo": a.motivo_empleado,
-                "tipo": "Ausencia"
+                "tipo": "Permiso Anticipado" if a.estado == 'notificada' else "Ausencia"
             } for a, e in ausencias
         ]
     except Exception as e:
@@ -215,8 +215,8 @@ def get_absence_requests(db = Depends(get_db)):
 def approve_absence(request_id: int, action: RequestAction, db = Depends(get_db)):
     try:
         if db.aprobar_ausencia(request_id, action.admin_id, action.reason or ""):
-            return {"message": "Ausencia aprobada"}
-        raise HTTPException(status_code=404, detail="Ausencia no encontrada")
+            return {"message": "Permiso/Ausencia aprobada"}
+        raise HTTPException(status_code=404, detail="Permiso/Ausencia no encontrada")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -224,7 +224,7 @@ def approve_absence(request_id: int, action: RequestAction, db = Depends(get_db)
 def reject_absence(request_id: int, action: RequestAction, db = Depends(get_db)):
     try:
         if db.rechazar_ausencia(request_id, action.admin_id, action.reason or "Sin motivo"):
-            return {"message": "Ausencia rechazada"}
-        raise HTTPException(status_code=404, detail="Ausencia no encontrada")
+            return {"message": "Permiso/Ausencia rechazada"}
+        raise HTTPException(status_code=404, detail="Permiso/Ausencia no encontrada")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

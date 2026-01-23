@@ -61,7 +61,9 @@ def login_employee(data: EmployeeLoginRequest, db = Depends(get_db)):
             "id": empleado.id,
             "nombre": empleado.nombre,
             "apellidos": empleado.apellidos,
+            "foto_path": empleado.foto_path or "",
             "dni": empleado.dni,
+            "email": empleado.email or "",
             "tipo_jornada": empleado.tipo_jornada,
             "es_admin": empleado.es_admin
         }
@@ -89,6 +91,9 @@ def login(data: LoginRequest, db = Depends(get_db)):
         "id": empleado.id,
         "nombre": empleado.nombre,
         "apellidos": empleado.apellidos,
+        "foto_path": empleado.foto_path or "",
+        "dni": empleado.dni,
+        "email": empleado.email or "",
         "es_admin": empleado.es_admin,
         "es_superadmin": empleado.es_superadmin,
         "token": "dummy-token-for-now" # En producción usar JWT

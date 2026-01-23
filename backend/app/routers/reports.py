@@ -22,47 +22,65 @@ class ReportRequest(BaseModel):
 @router.post("/generate")
 def generate_report(data: ReportRequest, db = Depends(get_db)):
     try:
+        print(f"\n📊 [REPORTS] Generando reporte:")
+        print(f"   Tipo: {data.type}")
+        print(f"   Formato: {data.format}")
+        print(f"   Fecha inicio: {data.start_date}")
+        print(f"   Fecha fin: {data.end_date}")
+        print(f"   Employee ID: {data.employee_id}")
+
         start = datetime.strptime(data.start_date, "%Y-%m-%d")
         end = datetime.strptime(data.end_date, "%Y-%m-%d")
         generator = ReportGenerator()
-        
+
         # Generar nombre de archivo único
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"informe_{timestamp}"
-        
+
         if data.format == "pdf":
             filename += ".pdf"
         else:
             filename += ".xlsx"
-            
+
         # Usar directorio temporal del sistema
         temp_dir = tempfile.gettempdir()
         filepath = os.path.join(temp_dir, filename)
-        
+        print(f"   📁 Filepath: {filepath}")
+
         if data.type == "individual":
             if not data.employee_id:
                 raise HTTPException(status_code=400, detail="Employee ID required")
-            
+
             emp = db.obtener_empleado(data.employee_id)
             if not emp:
                 raise HTTPException(status_code=404, detail="Empleado no encontrado")
-                
+
+            print(f"   👤 Empleado: {emp.nombre} {emp.apellidos}")
             fichajes = db.obtener_fichajes_periodo(data.employee_id, start, end)
-            
+            print(f"   📋 Fichajes encontrados: {len(fichajes)}")
+
+            if len(fichajes) > 0:
+                print(f"      Primer fichaje: fecha={fichajes[0].fecha}, horas={fichajes[0].horas_trabajadas}")
+
             if data.format == "pdf":
                 generator.generar_pdf_empleado(emp, fichajes, start, end, filepath)
             else:
                 generator.generar_excel_empleado(emp, fichajes, start, end, filepath)
-                
+
         else:
             # Todos los empleados
             fichajes = db.obtener_todos_fichajes_periodo(start, end)
-            
+            print(f"   📋 Total fichajes (todos los empleados): {len(fichajes)}")
+
+            if len(fichajes) > 0:
+                print(f"      Primer fichaje: fecha={fichajes[0][0].fecha}, empleado={fichajes[0][1].nombre}")
+
             if data.format == "pdf":
                  generator.generar_pdf_todos(fichajes, start, end, filepath)
             else:
                  generator.generar_excel_todos(fichajes, start, end, filepath)
-            
+
+        print(f"✅ [REPORTS] Reporte generado exitosamente: {filename}")
         return FileResponse(filepath, filename=filename, media_type='application/octet-stream')
 
     except Exception as e:
