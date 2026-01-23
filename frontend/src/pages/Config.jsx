@@ -89,6 +89,7 @@ function CompanySettings() {
   const fetchConfig = async () => {
     try {
       const res = await axios.get(`${API_URL}/config`);
+      console.log('Config recibido del servidor:', res.data);
       setConfig(res.data);
     } catch (err) {
       console.error("Error loading config", err);
@@ -111,15 +112,26 @@ function CompanySettings() {
     if (logoFile) formData.append('logo', logoFile);
     if (iconFile) formData.append('icono', iconFile);
 
+    // Debug: Ver qué se está enviando
+    console.log('Config antes de enviar:', config);
+    console.log('FormData entries:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`  ${key}: ${value}`);
+    }
+
     try {
-      await axios.put(`${API_URL}/config`, formData, {
+      const response = await axios.put(`${API_URL}/config`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      console.log('Respuesta del servidor:', response.data);
       setToast({ message: 'Configuración guardada correctamente', type: 'success' });
       setLogoFile(null);
       setIconFile(null);
-      fetchConfig(); // Recargar para ver rutas de imagenes actualizadas
+
+      // Recargar configuración y verificar
+      await fetchConfig();
     } catch (err) {
+      console.error('Error al guardar configuración:', err);
       setToast({ message: 'Error al guardar la configuración', type: 'error' });
     } finally {
       setLoading(false);

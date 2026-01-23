@@ -312,19 +312,19 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                     {/* Tab 2: Salarial (Solo Empleados) */}
                     <div className={activeTab === 2 ? 'block space-y-6' : 'hidden'}>
                         <div className="grid grid-cols-2 gap-6">
-                            <Input 
-                                label={`Pago Hora Normal (${config?.moneda || 'EUR'})`} 
-                                type="number" 
-                                value={formData.pago_por_hora} 
-                                onChange={e => setFormData({...formData, pago_por_hora: e.target.value})} 
-                                icon={<span className="text-sm font-bold text-slate-400">{getCurrencySymbol(config?.moneda)}</span>} 
+                            <Input
+                                label="Pago Hora Normal"
+                                type="number"
+                                value={formData.pago_por_hora}
+                                onChange={e => setFormData({...formData, pago_por_hora: e.target.value})}
+                                icon={<span className="text-sm font-bold text-slate-400">{getCurrencySymbol(config?.moneda || 'EUR')}</span>}
                             />
-                            <Input 
-                                label={`Pago Hora Especial (${config?.moneda || 'EUR'})`} 
-                                type="number" 
-                                value={formData.pago_hora_especial} 
-                                onChange={e => setFormData({...formData, pago_hora_especial: e.target.value})} 
-                                icon={<span className="text-sm font-bold text-slate-400">{getCurrencySymbol(config?.moneda)}</span>} 
+                            <Input
+                                label="Pago Hora Especial"
+                                type="number"
+                                value={formData.pago_hora_especial}
+                                onChange={e => setFormData({...formData, pago_hora_especial: e.target.value})}
+                                icon={<span className="text-sm font-bold text-slate-400">{getCurrencySymbol(config?.moneda || 'EUR')}</span>}
                             />
                         </div>
                         <div className="p-4 bg-blue-50 text-blue-800 text-sm rounded-xl">
