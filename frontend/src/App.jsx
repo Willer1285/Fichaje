@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Users, Clock, Settings, LogOut, Bell, Search, Plus, Calendar as CalendarIcon, X, Filter, Download, AlertTriangle, ChevronLeft, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Settings, LogOut, Bell, Search, Plus, Calendar as CalendarIcon, X, Filter, Download, AlertTriangle, ChevronLeft, Menu, Fingerprint } from 'lucide-react';
 import axios from 'axios';
 import Login from './pages/Login';
 import EmployeeDashboard from './pages/EmployeeDashboard';
@@ -252,29 +252,21 @@ function App() {
     const handleClose = () => window.pywebview?.api?.close();
 
     return (
-      <div className="h-9 bg-[#F5F5DC] flex justify-between items-center px-3 select-none border-b border-stone-200 shadow-sm z-50">
+      <div className="h-9 bg-white flex justify-between items-center px-3 select-none border-b border-slate-200 shadow-sm z-50">
         {/* Drag Region - Ocupa todo el espacio disponible */}
         <div className="flex-1 h-full flex items-center pywebview-drag-region cursor-default">
-           {config?.icono_path && (
-             <img 
-               src={`${API_URL.replace('/api', '')}${config.icono_path}`} 
-               alt="" 
-               className="w-4 h-4 mr-2 opacity-70"
-               onError={(e) => e.target.style.display = 'none'} 
-             />
-           )}
-           <span className="text-xs font-semibold text-stone-600 tracking-wide">Fichaje Zaragonjg v1.0</span>
+           <span className="text-xs font-semibold text-slate-700 tracking-wide">Fichaje Zaragonjg v1.0</span>
         </div>
-        
+
         {/* Window Controls */}
         <div className="flex items-center gap-1 no-drag">
-           <button onClick={handleMinimize} className="p-1.5 hover:bg-black/5 rounded-md text-stone-500 transition-colors focus:outline-none" title="Minimizar">
+           <button onClick={handleMinimize} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-600 transition-colors focus:outline-none" title="Minimizar">
              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
            </button>
-           <button onClick={handleMaximize} className="p-1.5 hover:bg-black/5 rounded-md text-stone-500 transition-colors focus:outline-none" title="Maximizar">
+           <button onClick={handleMaximize} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-600 transition-colors focus:outline-none" title="Maximizar">
              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>
            </button>
-           <button onClick={handleClose} className="p-1.5 hover:bg-red-500 hover:text-white rounded-md text-stone-500 transition-colors focus:outline-none" title="Cerrar">
+           <button onClick={handleClose} className="p-1.5 hover:bg-red-500 hover:text-white rounded-md text-slate-600 transition-colors focus:outline-none" title="Cerrar">
              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
            </button>
         </div>
@@ -297,7 +289,7 @@ function App() {
              />
           ) : (
             <div className="bg-primary p-2 rounded-lg shadow-lg shadow-primary/30 shrink-0">
-              <Clock className="w-6 h-6 text-white" />
+              <Fingerprint className="w-6 h-6 text-white" />
             </div>
           )}
           <div className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>

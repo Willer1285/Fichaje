@@ -156,7 +156,7 @@ if __name__ == '__main__':
     logging.info("🪟 Creando ventana de aplicación...")
     logging.info(f"   URL: http://127.0.0.1:45678")
     logging.info(f"   Tamaño: 1400x900")
-    logging.info(f"   Frameless: False (con barra de título)")
+    logging.info(f"   Frameless: True (barra de título personalizada)")
 
     window = webview.create_window(
         title='Fichaje Zaragonjg v1.0',
@@ -166,8 +166,8 @@ if __name__ == '__main__':
         resizable=True,
         min_size=(1000, 700),
         js_api=api,  # Exponer la API al frontend
-        frameless=False,  # FALSE para mostrar barra de título de Windows
-        easy_drag=False
+        frameless=True,  # TRUE para usar barra de título personalizada en React
+        easy_drag=True  # Permitir arrastrar la ventana desde la región drag
     )
 
     api.set_window(window)

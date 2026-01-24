@@ -79,7 +79,6 @@ function CompanySettings() {
   });
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
-  const [iconFile, setIconFile] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -110,7 +109,6 @@ function CompanySettings() {
     });
 
     if (logoFile) formData.append('logo', logoFile);
-    if (iconFile) formData.append('icono', iconFile);
 
     // Debug: Ver qué se está enviando
     console.log('Config antes de enviar:', config);
@@ -126,7 +124,6 @@ function CompanySettings() {
       console.log('Respuesta del servidor:', response.data);
       setToast({ message: 'Configuración guardada correctamente', type: 'success' });
       setLogoFile(null);
-      setIconFile(null);
 
       // Recargar configuración y verificar
       await fetchConfig();
@@ -159,39 +156,20 @@ function CompanySettings() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700">Logo</label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
-                  <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files[0])} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  {logoFile ? (
-                    <div className="text-sm text-blue-600 font-medium truncate">{logoFile.name}</div>
-                  ) : config.logo_path ? (
-                    <img src={`${API_URL.replace('/api', '')}${config.logo_path}`} alt="Logo" className="h-16 mx-auto object-contain" />
-                  ) : (
-                    <div className="flex flex-col items-center text-slate-400">
-                      <Upload size={24} className="mb-2" />
-                      <span className="text-xs">Subir Logo</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700">Icono</label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
-                  <input type="file" accept="image/*" onChange={e => setIconFile(e.target.files[0])} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  {iconFile ? (
-                    <div className="text-sm text-blue-600 font-medium truncate">{iconFile.name}</div>
-                  ) : config.icono_path ? (
-                    <img src={`${API_URL.replace('/api', '')}${config.icono_path}`} alt="Icono" className="h-16 mx-auto object-contain" />
-                  ) : (
-                    <div className="flex flex-col items-center text-slate-400">
-                      <Upload size={24} className="mb-2" />
-                      <span className="text-xs">Subir Icono</span>
-                    </div>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700">Logo</label>
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group max-w-xs">
+                <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files[0])} className="absolute inset-0 opacity-0 cursor-pointer" />
+                {logoFile ? (
+                  <div className="text-sm text-blue-600 font-medium truncate">{logoFile.name}</div>
+                ) : config.logo_path ? (
+                  <img src={`${API_URL.replace('/api', '')}${config.logo_path}`} alt="Logo" className="h-16 mx-auto object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center text-slate-400">
+                    <Upload size={24} className="mb-2" />
+                    <span className="text-xs">Subir Logo</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
