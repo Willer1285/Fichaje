@@ -126,13 +126,13 @@ if __name__ == '__main__':
     window = webview.create_window(
         title='Fichaje Zaragonjg v1.0',
         url='http://127.0.0.1:45678',
-        width=1200,
-        height=800,
+        width=1400,
+        height=900,
         resizable=True,
-        min_size=(800, 600),
+        min_size=(1000, 700),
         js_api=api,  # Exponer la API al frontend
-        frameless=True,
-        easy_drag=False # Controlamos el arrastre manualmente
+        frameless=False,  # FALSE para mostrar barra de título de Windows
+        easy_drag=False
     )
     
     api.set_window(window)
