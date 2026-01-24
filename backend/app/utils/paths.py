@@ -17,7 +17,7 @@ def get_base_path():
         return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 def get_data_path():
-    """
+    r"""
     Retorna la ruta donde se deben guardar los datos persistentes (DB, uploads).
     Se utiliza C:\ProgramData\FichajeZaragonjg para centralizar los datos en el equipo,
     independientemente de dónde se ejecute el archivo .exe.

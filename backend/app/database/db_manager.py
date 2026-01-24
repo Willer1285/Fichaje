@@ -191,12 +191,15 @@ class DatabaseManager:
                 cursor.execute("ALTER TABLE fichajes ADD COLUMN aprobado_por INTEGER")
 
             # Migración: Agregar columnas para permisos por horas en ausencias
-            cursor.execute("PRAGMA table_info(ausencias)")
-            columns = [col[1] for col in cursor.fetchall()]
-            if 'es_por_horas' not in columns:
-                cursor.execute("ALTER TABLE ausencias ADD COLUMN es_por_horas BOOLEAN DEFAULT 0")
-            if 'horas_solicitadas' not in columns:
-                cursor.execute("ALTER TABLE ausencias ADD COLUMN horas_solicitadas REAL DEFAULT 0.0")
+            # Primero verificar si la tabla existe
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ausencias'")
+            if cursor.fetchone():
+                cursor.execute("PRAGMA table_info(ausencias)")
+                columns = [col[1] for col in cursor.fetchall()]
+                if 'es_por_horas' not in columns:
+                    cursor.execute("ALTER TABLE ausencias ADD COLUMN es_por_horas BOOLEAN DEFAULT 0")
+                if 'horas_solicitadas' not in columns:
+                    cursor.execute("ALTER TABLE ausencias ADD COLUMN horas_solicitadas REAL DEFAULT 0.0")
 
             # Tabla de configuración
             cursor.execute("""
