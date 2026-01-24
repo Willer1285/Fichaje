@@ -43,7 +43,15 @@ async def log_requests(request: Request, call_next):
 # Usamos paths.get_uploads_path() que asegura la ruta persistente y crea el directorio
 uploads_path = paths.get_uploads_path()
 # Montamos la carpeta padre 'assets' para que /assets/uploads/... funcione
-assets_root = os.path.dirname(uploads_path)
+# IMPORTANTE: Usar ruta absoluta para evitar que se cree en directorio del .exe
+assets_root = os.path.abspath(os.path.dirname(uploads_path))
+logging.info(f"📁 Montando archivos estáticos desde: {assets_root}")
+
+# Verificar que el directorio existe antes de montar
+if not os.path.exists(assets_root):
+    logging.warning(f"⚠️ Creando directorio de assets: {assets_root}")
+    os.makedirs(assets_root, exist_ok=True)
+
 app.mount("/assets", StaticFiles(directory=assets_root), name="assets")
 
 # Servir frontend compilado (asegurar que existe la carpeta dist)

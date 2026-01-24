@@ -49,14 +49,11 @@ def main():
     
     # Datos a incluir: frontend/dist -> frontend/dist
     # Nota: PyInstaller espera src;dest
+    # IMPORTANTE: NO incluir assets aquí porque se crean dinámicamente en ProgramData
     add_data_list = [
         f"frontend/dist{sep}frontend/dist"
     ]
-    
-    # Incluir assets si existen
-    if os.path.exists(os.path.join(base_dir, "assets")):
-         add_data_list.append(f"assets{sep}assets")
-         
+
     add_data_args = " ".join([f'--add-data "{item}"' for item in add_data_list])
 
     # Imports ocultos necesarios para Uvicorn y FastAPI
@@ -81,8 +78,8 @@ def main():
     
     hidden_imports_args = " ".join([f"--hidden-import={mod}" for mod in hidden_imports])
     
-    # Icono
-    icon_path = os.path.join(base_dir, "assets", "icon.png")
+    # Icono de huella digital (.ico para Windows)
+    icon_path = os.path.join(base_dir, "assets", "fingerprint.ico")
     icon_option = f'--icon="{icon_path}"' if os.path.exists(icon_path) else ""
     
     # Rutas de búsqueda para PyInstaller (para que encuentre el paquete 'app' dentro de 'backend')
