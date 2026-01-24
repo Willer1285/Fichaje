@@ -1,7 +1,0 @@
-- [x] Implementar cierre de notificaciones al hacer clic fuera (App.jsx)
-- [x] Implementar cierre de notificaciones al hacer clic fuera (EmployeeDashboard.jsx)
-- [x] Arreglar botón cerrar sesión en sidebar colapsado (App.jsx)
-- [x] Modificar Backend para soportar filtrado de solicitudes por estado
-- [x] Implementar pestañas (Pendientes, Aprobadas, Rechazadas) en Solicitudes (Requests.jsx)
-- [x] Implementar sub-pestañas dinámicas (Vacaciones/Permisos) en Requests.jsx para evitar scroll excesivo
-- [ ] Unificar lista de solicitudes en pestaña "Todo" mezclando tipos y añadiendo etiqueta de tipo en tarjeta (Requests.jsx)
