@@ -311,7 +311,7 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
                                         <Trash2 size={16} /> Eliminar foto
                                     </button>
                                 )}
-                                <p className="text-xs text-center text-slate-400 w-40">Formato JPG/PNG. Máx 2MB.<br/>Se detectará y recortará el rostro automáticamente.</p>
+                                <p className="text-xs text-center text-slate-400 w-40">Formato JPG/PNG. Máx 1MB.<br/>Se detectará y recortará el rostro automáticamente.</p>
                             </div>
 
                             {/* Datos Básicos */}
