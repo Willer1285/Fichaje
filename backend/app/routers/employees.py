@@ -278,12 +278,15 @@ async def update_employee(
     existing_emp.turno_id = turno_id
     existing_emp.tipo_jornada = tipo_jornada
     
-    # Solo actualizar admin si se especifica (el frontend debería manejar esto)
-    # Nota: Si el usuario es el propio superadmin editándose, no debería poder quitarse admin
-    if existing_emp.es_superadmin and not es_admin:
-         pass # No permitir quitarse admin al superadmin por error
+    # IMPORTANTE: Preservar el flag es_superadmin
+    # El superadmin SIEMPRE debe mantener es_superadmin=True y es_admin=True
+    if existing_emp.es_superadmin:
+        # Si es superadmin, forzar que mantenga ambos flags
+        existing_emp.es_admin = True
+        existing_emp.es_superadmin = True  # Preservar explícitamente
     else:
-         existing_emp.es_admin = es_admin
+        # Si no es superadmin, permitir cambiar es_admin normalmente
+        existing_emp.es_admin = es_admin
 
     existing_emp.pago_por_hora = pago_por_hora
     existing_emp.pago_hora_especial = pago_hora_especial

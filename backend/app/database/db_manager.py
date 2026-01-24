@@ -470,22 +470,23 @@ class DatabaseManager:
                 ON qr_activos(fecha_expiracion, usado)
             """)
 
-            # Verificar y asegurar administrador por defecto
-            # Se garantiza que siempre exista el superadmin con las credenciales solicitadas
-            admin_dni = '00000000A'
-            # Importar hash_password aquí para asegurar disponibilidad si se mueve el código
-            from app.utils.security import hash_password
-            admin_pass_hash = hash_password("admin123")
+            # Verificar si existe CUALQUIER super administrador en el sistema
+            # IMPORTANTE: Buscar por es_superadmin=1, NO por DNI específico
+            # Esto evita crear duplicados si el DNI del superadmin fue editado
+            logging.info("\n🔑 [DB INIT] Verificando usuario super administrador...")
+            cursor.execute("SELECT COUNT(*) FROM empleados WHERE es_superadmin = 1")
+            superadmin_existe = cursor.fetchone()[0]
 
-            logging.info("\n🔑 [DB INIT] Verificando usuario administrador...")
-            logging.info(f"   DNI del admin: {admin_dni}")
-            logging.info(f"   Password hash generado: {admin_pass_hash[:20]}... (longitud: {len(admin_pass_hash)})")
+            if superadmin_existe == 0:
+                # Solo crear si NO existe ningún super admin en el sistema
+                admin_dni = '00000000A'
+                from app.utils.security import hash_password
+                admin_pass_hash = hash_password("admin123")
 
-            cursor.execute("SELECT COUNT(*) FROM empleados WHERE dni = ?", (admin_dni,))
-            admin_existe = cursor.fetchone()[0]
+                logging.info("   ⚙️  No hay super administrador. Creando usuario por defecto...")
+                logging.info(f"   DNI inicial: {admin_dni}")
+                logging.info(f"   Contraseña inicial: admin123")
 
-            if admin_existe == 0:
-                logging.info("   ⚙️  Creando usuario administrador por defecto...")
                 cursor.execute("""
                     INSERT INTO empleados (
                         nombre, apellidos, dni, telefono, numero_empleado,
@@ -496,30 +497,24 @@ class DatabaseManager:
                         'completa', 1, 1, ?, 1, ?
                     )
                 """, (admin_dni, admin_pass_hash, datetime.now()))
-                logging.info("   ✅ Usuario administrador creado exitosamente")
+                logging.info("   ✅ Usuario super administrador creado exitosamente")
             else:
-                # Asegurar que el admin tenga la contraseña correcta y permisos
-                # Esto garantiza acceso incluso si la BD ya existía con otra clave
-                logging.info("   ⚙️  Administrador ya existe. Actualizando credenciales...")
-                cursor.execute("""
-                    UPDATE empleados
-                    SET password_hash = ?, es_superadmin = 1, es_admin = 1, activo = 1
-                    WHERE dni = ?
-                """, (admin_pass_hash, admin_dni))
-                logging.info("   ✅ Credenciales del administrador actualizadas")
+                logging.info(f"   ✅ Ya existe un super administrador en el sistema (total: {superadmin_existe})")
+                logging.info("   ℹ️  No se creará uno nuevo. Puede editar el existente desde la interfaz.")
 
-            # Verificar que el administrador quedó correctamente configurado
-            cursor.execute("SELECT dni, nombre, apellidos, es_admin, es_superadmin, activo FROM empleados WHERE dni = ?", (admin_dni,))
+            # Verificación final: mostrar info del super admin actual
+            cursor.execute("SELECT id, dni, nombre, apellidos, es_admin, es_superadmin, activo FROM empleados WHERE es_superadmin = 1 LIMIT 1")
             admin_row = cursor.fetchone()
             if admin_row:
-                logging.info("   📋 Verificación final del admin:")
-                logging.info(f"      DNI: {admin_row[0]}")
-                logging.info(f"      Nombre: {admin_row[1]} {admin_row[2]}")
-                logging.info(f"      Es Admin: {admin_row[3]}")
-                logging.info(f"      Es Superadmin: {admin_row[4]}")
-                logging.info(f"      Activo: {admin_row[5]}")
+                logging.info("   📋 Super Administrador del sistema:")
+                logging.info(f"      ID: {admin_row[0]}")
+                logging.info(f"      DNI: {admin_row[1]}")
+                logging.info(f"      Nombre: {admin_row[2]} {admin_row[3]}")
+                logging.info(f"      Es Admin: {admin_row[4]}")
+                logging.info(f"      Es Superadmin: {admin_row[5]}")
+                logging.info(f"      Activo: {admin_row[6]}")
             else:
-                logging.info("   ⚠️  ADVERTENCIA: No se pudo verificar el administrador")
+                logging.info("   ⚠️  ADVERTENCIA: No se pudo verificar el super administrador")
 
             conn.commit()
 
