@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, Clock, Settings, LogOut, Bell, Search, Plus, Calendar as CalendarIcon, X, Filter, Download, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { LayoutDashboard, Users, Clock, Settings, LogOut, Bell, Search, Plus, Calendar as CalendarIcon, X, Filter, Download, AlertTriangle, ChevronLeft, Menu } from 'lucide-react';
 import axios from 'axios';
 import Login from './pages/Login';
 import EmployeeDashboard from './pages/EmployeeDashboard';
@@ -19,6 +19,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now());
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [newType, setNewType] = useState('employee');
@@ -46,10 +47,25 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [alertDetails, setAlertDetails] = useState(null);
   const [config, setConfig] = useState(null);
+
+  // Cerrar notificaciones al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Cargar configuración global al inicio
   useEffect(() => {
@@ -229,57 +245,152 @@ function App() {
     return <EmployeeDashboard user={user} onLogout={handleLogout} />;
   }
 
+  // Barra de título personalizada para escritorio
+  const TitleBar = () => {
+    const handleMinimize = () => window.pywebview?.api?.minimize();
+    const handleMaximize = () => window.pywebview?.api?.maximize();
+    const handleClose = () => window.pywebview?.api?.close();
+
+    return (
+      <div className="h-9 bg-[#F5F5DC] flex justify-between items-center px-3 select-none border-b border-stone-200 shadow-sm z-50">
+        {/* Drag Region - Ocupa todo el espacio disponible */}
+        <div className="flex-1 h-full flex items-center pywebview-drag-region cursor-default">
+           {config?.icono_path && (
+             <img 
+               src={`${API_URL.replace('/api', '')}${config.icono_path}`} 
+               alt="" 
+               className="w-4 h-4 mr-2 opacity-70"
+               onError={(e) => e.target.style.display = 'none'} 
+             />
+           )}
+           <span className="text-xs font-semibold text-stone-600 tracking-wide">Fichaje Zaragonjg v1.0</span>
+        </div>
+        
+        {/* Window Controls */}
+        <div className="flex items-center gap-1 no-drag">
+           <button onClick={handleMinimize} className="p-1.5 hover:bg-black/5 rounded-md text-stone-500 transition-colors focus:outline-none" title="Minimizar">
+             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+           </button>
+           <button onClick={handleMaximize} className="p-1.5 hover:bg-black/5 rounded-md text-stone-500 transition-colors focus:outline-none" title="Maximizar">
+             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>
+           </button>
+           <button onClick={handleClose} className="p-1.5 hover:bg-red-500 hover:text-white rounded-md text-stone-500 transition-colors focus:outline-none" title="Cerrar">
+             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+           </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex h-screen bg-background font-sans text-slate-900">
+    <div className="flex flex-col h-screen bg-background font-sans text-slate-900 overflow-hidden">
+      <TitleBar />
+      <div className="flex flex-1 overflow-hidden relative w-full">
       {/* Sidebar */}
-      <aside className="w-64 bg-sidebar text-white flex flex-col transition-all duration-300 shadow-xl z-20">
-        <div className="p-6 flex items-center gap-3">
+      <aside className={`bg-sidebar text-white flex flex-col transition-all duration-300 shadow-xl z-20 h-full ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>
+        <div className={`p-6 flex items-center gap-3 ${isSidebarCollapsed ? 'justify-center px-2' : ''}`}>
           {config?.logo_path ? (
              <img 
                src={`${API_URL.replace('/api', '')}${config.logo_path}`} 
                alt="Logo" 
-               className="w-10 h-10 object-contain bg-white/10 rounded-lg p-1"
+               className="w-10 h-10 object-contain bg-white/10 rounded-lg p-1 shrink-0"
              />
           ) : (
-            <div className="bg-primary p-2 rounded-lg shadow-lg shadow-primary/30">
+            <div className="bg-primary p-2 rounded-lg shadow-lg shadow-primary/30 shrink-0">
               <Clock className="w-6 h-6 text-white" />
             </div>
           )}
-          <div>
+          <div className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
             <h1 className="font-bold text-xl leading-none tracking-tight">{config?.nombre_aplicacion || 'TimeTrack'}</h1>
-            <span className="text-xs text-slate-400 font-medium tracking-widest uppercase">{config?.slogan || 'Pro'}</span>
+            <span className="text-xs text-slate-400 font-medium tracking-widest">{config?.slogan || 'Pro'}</span>
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          <SidebarItem icon={<LayoutDashboard size={20} />} text="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-          <SidebarItem icon={<CalendarIcon size={20} />} text="Calendario" active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} />
-          <SidebarItem icon={<Users size={20} />} text="Personal" active={activeTab === 'personal'} onClick={() => setActiveTab('personal')} />
-          <SidebarItem icon={<Clock size={20} />} text="Fichajes" active={activeTab === 'fichajes'} onClick={() => setActiveTab('fichajes')} />
-          <SidebarItem icon={<CalendarIcon size={20} />} text="Solicitudes" active={activeTab === 'requests'} onClick={() => setActiveTab('requests')} />
-          <SidebarItem icon={<div className="rotate-90"><LayoutDashboard size={20} /></div>} text="Informes" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
-          <SidebarItem icon={<Settings size={20} />} text="Configuración" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
+        <nav className="flex-1 px-3 space-y-2 mt-4">
+          <SidebarItem 
+            icon={<LayoutDashboard size={20} />} 
+            text="Dashboard" 
+            active={activeTab === 'dashboard'} 
+            onClick={() => setActiveTab('dashboard')} 
+            collapsed={isSidebarCollapsed}
+          />
+          <SidebarItem 
+            icon={<CalendarIcon size={20} />} 
+            text="Calendario" 
+            active={activeTab === 'calendar'} 
+            onClick={() => setActiveTab('calendar')} 
+            collapsed={isSidebarCollapsed}
+          />
+          <SidebarItem 
+            icon={<Users size={20} />} 
+            text="Personal" 
+            active={activeTab === 'personal'} 
+            onClick={() => setActiveTab('personal')} 
+            collapsed={isSidebarCollapsed}
+          />
+          <SidebarItem 
+            icon={<Clock size={20} />} 
+            text="Fichajes" 
+            active={activeTab === 'fichajes'} 
+            onClick={() => setActiveTab('fichajes')} 
+            collapsed={isSidebarCollapsed}
+          />
+          <SidebarItem 
+            icon={<CalendarIcon size={20} />} 
+            text="Solicitudes" 
+            active={activeTab === 'requests'} 
+            onClick={() => setActiveTab('requests')} 
+            collapsed={isSidebarCollapsed}
+          />
+          <SidebarItem 
+            icon={<div className="rotate-90"><LayoutDashboard size={20} /></div>} 
+            text="Informes" 
+            active={activeTab === 'reports'} 
+            onClick={() => setActiveTab('reports')} 
+            collapsed={isSidebarCollapsed}
+          />
+          <SidebarItem 
+            icon={<Settings size={20} />} 
+            text="Configuración" 
+            active={activeTab === 'config'} 
+            onClick={() => setActiveTab('config')} 
+            collapsed={isSidebarCollapsed}
+          />
         </nav>
 
         <div className="p-4 border-t border-slate-700/50">
-          <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
+          <div className={`flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group relative ${isSidebarCollapsed ? 'justify-center' : ''}`}>
             {user.foto_path ? (
               <img
                 src={`${API_URL.replace('/api', '')}${user.foto_path}?t=${avatarTimestamp}`}
                 alt={`${user.nombre} ${user.apellidos}`}
-                className="w-10 h-10 rounded-full object-cover border-2 border-white/20 shadow-lg"
+                className="w-10 h-10 rounded-full object-cover border-2 border-white/20 shadow-lg shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold shadow-lg text-white text-sm">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold shadow-lg text-white text-sm shrink-0">
                 {user.nombre?.charAt(0)}{user.apellidos?.charAt(0)}
               </div>
             )}
-            <div className="flex-1 min-w-0">
+            
+            <div className={`flex-1 min-w-0 transition-all duration-300 overflow-hidden ${isSidebarCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
               <p className="text-sm font-medium truncate group-hover:text-white transition-colors">{user.nombre}</p>
               <p className="text-xs text-slate-400 truncate">{user.es_superadmin ? 'Super Admin' : 'Admin'}</p>
             </div>
-            <button onClick={handleLogout} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
-              <LogOut size={18} className="text-slate-400 hover:text-error transition-colors" />
+            
+            {/* Botón Logout: En expandido es normal, en colapsado cubre la foto al hover */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }} 
+              className={`transition-colors ${
+                  isSidebarCollapsed 
+                  ? 'absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 text-white z-10' 
+                  : 'p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-error'
+              }`}
+              title="Cerrar sesión"
+            >
+              <LogOut size={isSidebarCollapsed ? 20 : 18} />
             </button>
           </div>
         </div>
@@ -289,15 +400,24 @@ function App() {
       <main className="flex-1 flex flex-col overflow-hidden bg-background relative">
         {/* Header */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 sticky top-0 z-10">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-              {activeTab === 'dashboard' ? 'Panel de Control' : 
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 bg-white border border-blue-200/60 text-blue-600 rounded-xl shadow-sm shadow-blue-100 hover:shadow-md hover:bg-slate-50 hover:animate-none animate-pulse transition-all"
+              title={isSidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+            >
+              {isSidebarCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
+            </button>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+                {activeTab === 'dashboard' ? 'Panel de Control' : 
                activeTab === 'calendar' ? 'Calendario General' :
                activeTab === 'personal' ? 'Gestión de Personal' :
                activeTab === 'fichajes' ? 'Historial de Fichajes' :
                activeTab === 'requests' ? 'Solicitudes' : 'Configuración'}
-            </h2>
-            <p className="text-sm text-slate-500 font-medium">Gestión de fichajes y personal</p>
+              </h2>
+              <p className="text-sm text-slate-500 font-medium">Gestión de fichajes y personal</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -309,12 +429,12 @@ function App() {
                 className="pl-11 pr-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white w-64 transition-all border border-transparent focus:border-primary/10"
               />
             </div>
-            <div className="relative">
+            <div className="relative" ref={notificationRef}>
                 <button 
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="p-2.5 hover:bg-slate-100 rounded-full relative transition-colors"
+                    className={`p-2.5 hover:bg-slate-100 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 text-primary' : 'text-slate-600'}`}
                 >
-                    <Bell className="w-5 h-5 text-slate-600" />
+                    <Bell className="w-5 h-5" />
                     {notifications.length > 0 && (
                         <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-white"></span>
                     )}
@@ -857,6 +977,7 @@ function App() {
         </div>
       </main>
 
+      </div>
       {/* Alert Dialog */}
       <AlertDialog
         isOpen={alertDialog.isOpen}
@@ -868,21 +989,26 @@ function App() {
   );
 }
 
-function SidebarItem({ icon, text, active, onClick }) {
+function SidebarItem({ icon, text, active, onClick, collapsed }) {
   return (
     <button 
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden ${
+      className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden ${
         active 
           ? 'bg-primary text-white shadow-lg shadow-primary/30' 
           : 'text-slate-400 hover:bg-white/5 hover:text-white'
-      }`}
+      } ${collapsed ? 'justify-center' : ''}`}
+      title={collapsed ? text : ''}
     >
       <div className={`relative z-10 transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>
         {icon}
       </div>
-      <span className="relative z-10">{text}</span>
-      {active && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white/30 rounded-l-full"></div>}
+      
+      {!collapsed && (
+        <span className="relative z-10 animate-in fade-in duration-200 whitespace-nowrap">{text}</span>
+      )}
+      
+      {active && !collapsed && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white/30 rounded-l-full"></div>}
     </button>
   );
 }

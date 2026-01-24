@@ -218,6 +218,8 @@ class Ausencia:
     fecha_registro: Optional[datetime] = None
     fecha_aprobacion: Optional[datetime] = None
     impacta_nomina: str = "remunerado"  # remunerado, no_remunerado, it (incapacidad temporal)
+    es_por_horas: bool = False
+    horas_solicitadas: float = 0.0
 
 
 @dataclass

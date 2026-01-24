@@ -3,7 +3,7 @@ from app.dependencies import get_db
 from app.database.models import SolicitudVacacion, Ausencia
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 router = APIRouter(
     prefix="/api/requests",
@@ -30,6 +30,8 @@ class AbsenceNotification(BaseModel):
     subtipo: Optional[str] = ""
     motivo: str
     impacta_nomina: str
+    es_por_horas: bool = False
+    horas_solicitadas: float = 0.0
 
 # ==================== EMPLEADO ====================
 
@@ -79,8 +81,15 @@ def create_vacation_request(data: VacationRequest, db = Depends(get_db)):
         # Validar saldo si es vacación anual
         if data.tipo == "vacaciones_anuales":
             saldo = db.obtener_saldo_vacaciones(data.employee_id, fecha_inicio.year)
-            if dias > saldo.dias_pendientes:
-                raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Disponibles: {saldo.dias_pendientes}, Solicitados: {dias}")
+            
+            # Obtener solicitudes pendientes para restar del saldo disponible
+            pendientes = db.obtener_solicitudes_empleado(data.employee_id, solo_pendientes=True)
+            dias_pendientes = sum(p.dias_solicitados for p in pendientes if p.tipo == "vacaciones_anuales")
+            
+            total_solicitado = dias + dias_pendientes
+            
+            if total_solicitado > saldo.dias_pendientes:
+                raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Disponibles: {saldo.dias_pendientes}, En trámite: {dias_pendientes}, Solicitados ahora: {dias}. Total excedente: {total_solicitado - saldo.dias_pendientes}")
 
         solicitud = SolicitudVacacion(
             empleado_id=data.employee_id,
@@ -115,7 +124,11 @@ def get_employee_absences(employee_id: int, db = Depends(get_db)):
                     "fecha_fin": a.fecha_fin.strftime("%Y-%m-%d"),
                     "tipo": a.tipo_ausencia,
                     "estado": a.estado,
-                    "motivo": a.motivo_empleado
+                    "motivo": a.motivo_empleado,
+                    "motivo_rechazo": a.observaciones_admin if a.estado == 'rechazada' else None,
+                    "observaciones_admin": a.observaciones_admin,
+                    "es_por_horas": a.es_por_horas,
+                    "horas_solicitadas": a.horas_solicitadas
                 } for a in ausencias
             ],
             "pending_justification": [
@@ -133,6 +146,40 @@ def get_employee_absences(employee_id: int, db = Depends(get_db)):
 def create_absence_notification(data: AbsenceNotification, db = Depends(get_db)):
     """Crea una notificación de ausencia"""
     try:
+        # Validar permisos por horas
+        if data.es_por_horas:
+            if data.horas_solicitadas <= 0:
+                raise HTTPException(status_code=400, detail="La cantidad de horas debe ser mayor a 0")
+            
+            # Obtener empleado para verificar jornada
+            empleado = db.obtener_empleado(data.employee_id)
+            if not empleado:
+                raise HTTPException(status_code=404, detail="Empleado no encontrado")
+            
+            horas_jornada = 8.0 # Valor por defecto
+            
+            if empleado.turno_id:
+                turno = db.obtener_turno(empleado.turno_id)
+                if turno and turno.hora_inicio and turno.hora_fin:
+                    try:
+                        h_ini, m_ini = map(int, turno.hora_inicio.split(':'))
+                        h_fin, m_fin = map(int, turno.hora_fin.split(':'))
+                        inicio = timedelta(hours=h_ini, minutes=m_ini)
+                        fin = timedelta(hours=h_fin, minutes=m_fin)
+                        
+                        # Manejar turno nocturno
+                        if fin <= inicio:
+                            fin += timedelta(days=1)
+                            
+                        duracion = (fin - inicio).total_seconds() / 3600
+                        horas_jornada = duracion
+                    except:
+                        pass # Usar default si hay error parseando
+            
+            limite_horas = horas_jornada / 2
+            if data.horas_solicitadas > limite_horas:
+                raise HTTPException(status_code=400, detail=f"Las horas solicitadas ({data.horas_solicitadas}) no pueden exceder la mitad de la jornada ({limite_horas} horas)")
+
         ausencia = Ausencia(
             empleado_id=data.employee_id,
             fecha_inicio=datetime.strptime(data.fecha_inicio, "%Y-%m-%d"),
@@ -142,20 +189,24 @@ def create_absence_notification(data: AbsenceNotification, db = Depends(get_db))
             estado="notificada",
             es_notificacion_previa=True,
             motivo_empleado=data.motivo,
-            impacta_nomina=data.impacta_nomina
+            impacta_nomina=data.impacta_nomina,
+            es_por_horas=data.es_por_horas,
+            horas_solicitadas=data.horas_solicitadas
         )
         db.crear_ausencia(ausencia)
-        return {"message": "Ausencia notificada correctamente"}
+        return {"message": "Permiso notificado correctamente"}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== ADMIN ====================
 
 @router.get("/vacations")
-def get_vacation_requests(db = Depends(get_db)):
-    """Obtiene solicitudes de vacaciones pendientes"""
+def get_vacation_requests(status: Optional[str] = 'pendiente', db = Depends(get_db)):
+    """Obtiene solicitudes de vacaciones filtradas por estado (pendiente por defecto)"""
     try:
-        solicitudes = db.obtener_solicitudes_pendientes()
+        solicitudes = db.obtener_solicitudes_vacaciones_admin(status)
         return [
             {
                 "id": s.id,
@@ -165,7 +216,9 @@ def get_vacation_requests(db = Depends(get_db)):
                 "fecha_fin": s.fecha_fin.strftime("%Y-%m-%d"),
                 "dias": s.dias_solicitados,
                 "motivo": s.motivo_empleado,
-                "tipo": "Vacaciones"
+                "tipo": "Vacaciones",
+                "estado": s.estado,
+                "motivo_rechazo": s.motivo_rechazo
             } for s, e in solicitudes
         ]
     except Exception as e:
@@ -191,11 +244,21 @@ def reject_vacation(request_id: int, action: RequestAction, db = Depends(get_db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/absences")
-def get_absence_requests(db = Depends(get_db)):
-    """Obtiene ausencias pendientes de aprobación"""
+@router.delete("/vacations/{request_id}")
+def delete_vacation_request(request_id: int, db = Depends(get_db)):
+    """Elimina una solicitud de vacaciones"""
     try:
-        ausencias = db.obtener_ausencias_pendientes_admin()
+        if db.eliminar_solicitud_vacacion(request_id):
+            return {"message": "Solicitud eliminada"}
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/absences")
+def get_absence_requests(status: Optional[str] = 'pendiente', db = Depends(get_db)):
+    """Obtiene ausencias filtradas por estado (pendiente por defecto)"""
+    try:
+        ausencias = db.obtener_ausencias_admin(status)
         return [
             {
                 "id": a.id,
@@ -205,7 +268,9 @@ def get_absence_requests(db = Depends(get_db)):
                 "fecha_fin": a.fecha_fin.strftime("%Y-%m-%d"),
                 "tipo_ausencia": a.tipo_ausencia,
                 "motivo": a.motivo_empleado,
-                "tipo": "Permiso Anticipado" if a.estado == 'notificada' else "Ausencia"
+                "tipo": "Permiso Anticipado" if a.estado == 'notificada' else "Ausencia",
+                "estado": a.estado,
+                "observaciones_admin": a.observaciones_admin
             } for a, e in ausencias
         ]
     except Exception as e:
@@ -226,5 +291,15 @@ def reject_absence(request_id: int, action: RequestAction, db = Depends(get_db))
         if db.rechazar_ausencia(request_id, action.admin_id, action.reason or "Sin motivo"):
             return {"message": "Permiso/Ausencia rechazada"}
         raise HTTPException(status_code=404, detail="Permiso/Ausencia no encontrada")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/absences/{request_id}")
+def delete_absence_request(request_id: int, db = Depends(get_db)):
+    """Elimina una solicitud de ausencia"""
+    try:
+        if db.eliminar_ausencia(request_id):
+            return {"message": "Solicitud eliminada"}
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

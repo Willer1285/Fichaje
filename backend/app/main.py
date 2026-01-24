@@ -3,16 +3,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.routers import employees, attendance, auth, requests, reports, config, departments, locations, schedules, notifications, calendar
+from app.utils import paths
 import os
 
 app = FastAPI(title="TimeTrack Pro API", version="2.0.0")
 
 # Servir archivos estáticos (uploads)
-os.makedirs("assets/uploads", exist_ok=True)
-app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+# Usamos paths.get_uploads_path() que asegura la ruta persistente y crea el directorio
+uploads_path = paths.get_uploads_path()
+# Montamos la carpeta padre 'assets' para que /assets/uploads/... funcione
+assets_root = os.path.dirname(uploads_path)
+app.mount("/assets", StaticFiles(directory=assets_root), name="assets")
 
 # Servir frontend compilado (asegurar que existe la carpeta dist)
-frontend_path = os.path.join(os.getcwd(), "frontend", "dist")
+frontend_path = paths.get_frontend_dist_path()
 if os.path.exists(frontend_path):
     # Montar la raíz de dist en /static para que coincida con base='/static/' de Vite
     app.mount("/static", StaticFiles(directory=frontend_path), name="static_frontend")
@@ -60,6 +64,7 @@ async def custom_404_handler(request, __):
         return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
     # Para cualquier otra ruta, servir el index.html del SPA
+    # frontend_path se define arriba usando paths.get_frontend_dist_path()
     index_path = os.path.join(frontend_path, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)

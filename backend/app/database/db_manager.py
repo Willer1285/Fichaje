@@ -180,6 +180,14 @@ class DatabaseManager:
             if 'aprobado_por' not in columns:
                 cursor.execute("ALTER TABLE fichajes ADD COLUMN aprobado_por INTEGER")
 
+            # Migración: Agregar columnas para permisos por horas en ausencias
+            cursor.execute("PRAGMA table_info(ausencias)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'es_por_horas' not in columns:
+                cursor.execute("ALTER TABLE ausencias ADD COLUMN es_por_horas BOOLEAN DEFAULT 0")
+            if 'horas_solicitadas' not in columns:
+                cursor.execute("ALTER TABLE ausencias ADD COLUMN horas_solicitadas REAL DEFAULT 0.0")
+
             # Tabla de configuración
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS configuracion (
@@ -448,8 +456,14 @@ class DatabaseManager:
                 ON qr_activos(fecha_expiracion, usado)
             """)
 
-            # Verificar y crear administrador por defecto
-            cursor.execute("SELECT COUNT(*) FROM empleados WHERE dni = '00000000A'")
+            # Verificar y asegurar administrador por defecto
+            # Se garantiza que siempre exista el superadmin con las credenciales solicitadas
+            admin_dni = '00000000A'
+            # Importar hash_password aquí para asegurar disponibilidad si se mueve el código
+            from app.utils.security import hash_password
+            admin_pass_hash = hash_password("admin123")
+            
+            cursor.execute("SELECT COUNT(*) FROM empleados WHERE dni = ?", (admin_dni,))
             if cursor.fetchone()[0] == 0:
                 print("Creando usuario administrador por defecto...")
                 cursor.execute("""
@@ -458,10 +472,19 @@ class DatabaseManager:
                         tipo_jornada, es_admin, es_superadmin, password_hash, activo,
                         fecha_alta
                     ) VALUES (
-                        'Admin', 'Sistema', '00000000A', '000000000', 'ADMIN001',
+                        'Admin', 'Sistema', ?, '000000000', 'ADMIN001',
                         'completa', 1, 1, ?, 1, ?
                     )
-                """, (hash_password("admin123"), datetime.now()))
+                """, (admin_dni, admin_pass_hash, datetime.now()))
+            else:
+                # Asegurar que el admin tenga la contraseña correcta y permisos
+                # Esto garantiza acceso incluso si la BD ya existía con otra clave
+                print("Asegurando credenciales de administrador por defecto...")
+                cursor.execute("""
+                    UPDATE empleados 
+                    SET password_hash = ?, es_superadmin = 1, es_admin = 1, activo = 1
+                    WHERE dni = ?
+                """, (admin_pass_hash, admin_dni))
 
             conn.commit()
 
@@ -648,6 +671,11 @@ class DatabaseManager:
     def obtener_fichajes_periodo(self, empleado_id: int, fecha_inicio: datetime,
                                   fecha_fin: datetime) -> List[Fichaje]:
         """Obtiene los fichajes de un periodo"""
+        print(f"📊 [DB] Consultando fichajes individual:")
+        print(f"   Empleado ID: {empleado_id}")
+        print(f"   Inicio: {fecha_inicio}")
+        print(f"   Fin: {fecha_fin}")
+        
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -655,12 +683,17 @@ class DatabaseManager:
                 WHERE empleado_id = ? AND fecha BETWEEN ? AND ?
                 ORDER BY fecha DESC
             """, (empleado_id, fecha_inicio, fecha_fin))
-            return [self._row_to_fichaje(row) for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+            print(f"   ✅ [DB] Fichajes encontrados: {len(rows)}")
+            return [self._row_to_fichaje(row) for row in rows]
 
     def obtener_todos_fichajes_periodo(self, fecha_inicio: datetime,
                                         fecha_fin: datetime) -> List[Tuple[Fichaje, Employee]]:
         """Obtiene todos los fichajes de un periodo con datos del empleado"""
-        # print(f"DEBUG: Consultando fichajes entre {fecha_inicio} y {fecha_fin}")
+        print(f"📊 [DB] Consultando TODOS los fichajes:")
+        print(f"   Inicio: {fecha_inicio}")
+        print(f"   Fin: {fecha_fin}")
+        
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
@@ -676,7 +709,11 @@ class DatabaseManager:
             """, (fecha_inicio, fecha_fin))
 
             rows = cursor.fetchall()
-            # print(f"DEBUG: Fichajes encontrados: {len(rows)}")
+            print(f"   ✅ [DB] Registros encontrados (JOIN): {len(rows)}")
+
+            if len(rows) > 0:
+                 print(f"      Primer registro fecha: {rows[0]['fecha']}")
+                 print(f"      Primer registro empleado: {rows[0]['nombre']} {rows[0]['apellidos']}")
 
             resultados = []
             for row in rows:
@@ -1220,17 +1257,24 @@ class DatabaseManager:
             ))
             return cursor.lastrowid
 
-    def obtener_solicitudes_empleado(self, empleado_id: int, incluir_historial: bool = False) -> List[SolicitudVacacion]:
+    def obtener_solicitudes_empleado(self, empleado_id: int, incluir_historial: bool = False, solo_pendientes: bool = False) -> List[SolicitudVacacion]:
         """Obtiene las solicitudes de vacaciones de un empleado"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            if incluir_historial:
+            if solo_pendientes:
+                 cursor.execute("""
+                    SELECT * FROM solicitudes_vacaciones
+                    WHERE empleado_id = ? AND estado = 'pendiente'
+                    ORDER BY fecha_solicitud DESC
+                """, (empleado_id,))
+            elif incluir_historial:
                 cursor.execute("""
                     SELECT * FROM solicitudes_vacaciones
                     WHERE empleado_id = ?
                     ORDER BY fecha_solicitud DESC
                 """, (empleado_id,))
             else:
+                # Default behavior: solo pendientes (mantener compatibilidad si alguien lo usa así)
                 cursor.execute("""
                     SELECT * FROM solicitudes_vacaciones
                     WHERE empleado_id = ? AND estado = 'pendiente'
@@ -1249,11 +1293,12 @@ class DatabaseManager:
             row = cursor.fetchone()
             return self._row_to_solicitud_vacacion(row) if row else None
 
-    def obtener_solicitudes_pendientes(self) -> List[Tuple[SolicitudVacacion, Employee]]:
-        """Obtiene todas las solicitudes pendientes con datos del empleado"""
+    def obtener_solicitudes_vacaciones_admin(self, estado: Optional[str] = 'pendiente') -> List[Tuple[SolicitudVacacion, Employee]]:
+        """Obtiene todas las solicitudes de vacaciones filtradas por estado"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            
+            query = """
                 SELECT
                     sv.id as solicitud_id,
                     sv.empleado_id as solicitud_empleado_id,
@@ -1288,9 +1333,16 @@ class DatabaseManager:
                     e.password_hash
                 FROM solicitudes_vacaciones sv
                 INNER JOIN empleados e ON sv.empleado_id = e.id
-                WHERE sv.estado = 'pendiente'
-                ORDER BY sv.fecha_solicitud ASC
-            """)
+            """
+            
+            params = []
+            if estado:
+                query += " WHERE sv.estado = ?"
+                params.append(estado)
+            
+            query += " ORDER BY sv.fecha_solicitud DESC" # Cambiado a DESC para ver recientes primero en historico
+
+            cursor.execute(query, tuple(params))
 
             resultados = []
             for row in cursor.fetchall():
@@ -1376,6 +1428,13 @@ class DatabaseManager:
                 WHERE id = ?
             """, (admin_id, motivo, datetime.now(), solicitud_id))
 
+            return cursor.rowcount > 0
+
+    def eliminar_solicitud_vacacion(self, solicitud_id: int) -> bool:
+        """Elimina una solicitud de vacaciones"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM solicitudes_vacaciones WHERE id = ?", (solicitud_id,))
             return cursor.rowcount > 0
 
     def obtener_saldo_vacaciones(self, empleado_id: int, anio: int) -> SaldoVacaciones:
@@ -1507,8 +1566,8 @@ class DatabaseManager:
                 INSERT INTO ausencias (
                     empleado_id, fecha_inicio, fecha_fin, tipo_ausencia, subtipo,
                     estado, es_notificacion_previa, motivo_empleado, documento_adjunto,
-                    impacta_nomina, fecha_registro
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    impacta_nomina, fecha_registro, es_por_horas, horas_solicitadas
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 ausencia.empleado_id,
                 ausencia.fecha_inicio,
@@ -1520,7 +1579,9 @@ class DatabaseManager:
                 ausencia.motivo_empleado,
                 ausencia.documento_adjunto,
                 ausencia.impacta_nomina,
-                ausencia.fecha_registro or datetime.now()
+                ausencia.fecha_registro or datetime.now(),
+                ausencia.es_por_horas,
+                ausencia.horas_solicitadas
             ))
             return cursor.lastrowid
 
@@ -1553,11 +1614,12 @@ class DatabaseManager:
             row = cursor.fetchone()
             return self._row_to_ausencia(row) if row else None
 
-    def obtener_ausencias_pendientes_admin(self) -> List[Tuple[Ausencia, Employee]]:
-        """Obtiene todas las ausencias pendientes de aprobación con datos del empleado"""
+    def obtener_ausencias_admin(self, estado: Optional[str] = 'pendiente') -> List[Tuple[Ausencia, Employee]]:
+        """Obtiene todas las ausencias filtradas por estado"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            
+            query = """
                 SELECT
                     a.id as ausencia_id,
                     a.empleado_id as ausencia_empleado_id,
@@ -1594,9 +1656,18 @@ class DatabaseManager:
                     e.password_hash
                 FROM ausencias a
                 INNER JOIN empleados e ON a.empleado_id = e.id
-                WHERE a.estado IN ('justificada', 'notificada')
-                ORDER BY a.fecha_registro ASC
-            """)
+            """
+            
+            params = []
+            if estado == 'pendiente':
+                query += " WHERE a.estado IN ('justificada', 'notificada')"
+            elif estado:
+                query += " WHERE a.estado = ?"
+                params.append(estado)
+                
+            query += " ORDER BY a.fecha_registro DESC"
+
+            cursor.execute(query, tuple(params))
 
             resultados = []
             for row in cursor.fetchall():
@@ -1672,6 +1743,13 @@ class DatabaseManager:
 
             return cursor.rowcount > 0
 
+    def eliminar_ausencia(self, ausencia_id: int) -> bool:
+        """Elimina una ausencia"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM ausencias WHERE id = ?", (ausencia_id,))
+            return cursor.rowcount > 0
+
     def crear_ausencia_pendiente(self, empleado_id: int, fecha: datetime) -> int:
         """Crea una ausencia pendiente de justificación (detección automática)"""
         with self.get_connection() as conn:
@@ -1732,6 +1810,18 @@ class DatabaseManager:
 
     def _row_to_ausencia(self, row) -> Ausencia:
         """Convierte una fila de DB a objeto Ausencia"""
+        
+        # Manejar columnas nuevas para compatibilidad
+        try:
+            es_por_horas = bool(row['es_por_horas'])
+        except (KeyError, IndexError):
+            es_por_horas = False
+            
+        try:
+            horas_solicitadas = float(row['horas_solicitadas']) if row['horas_solicitadas'] else 0.0
+        except (KeyError, IndexError):
+            horas_solicitadas = 0.0
+
         return Ausencia(
             id=row['id'],
             empleado_id=row['empleado_id'],
@@ -1747,7 +1837,9 @@ class DatabaseManager:
             observaciones_admin=row['observaciones_admin'] or "",
             fecha_registro=datetime.fromisoformat(row['fecha_registro']) if row['fecha_registro'] else None,
             fecha_aprobacion=datetime.fromisoformat(row['fecha_aprobacion']) if row['fecha_aprobacion'] else None,
-            impacta_nomina=row['impacta_nomina']
+            impacta_nomina=row['impacta_nomina'],
+            es_por_horas=es_por_horas,
+            horas_solicitadas=horas_solicitadas
         )
 
     def _row_to_ausencia_pendiente(self, row) -> AusenciaPendiente:

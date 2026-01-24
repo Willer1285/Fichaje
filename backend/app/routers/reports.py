@@ -30,7 +30,8 @@ def generate_report(data: ReportRequest, db = Depends(get_db)):
         print(f"   Employee ID: {data.employee_id}")
 
         start = datetime.strptime(data.start_date, "%Y-%m-%d")
-        end = datetime.strptime(data.end_date, "%Y-%m-%d")
+        # Asegurar que la fecha fin incluya todo el día (hasta 23:59:59)
+        end = datetime.strptime(data.end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999)
         generator = ReportGenerator()
 
         # Generar nombre de archivo único
@@ -61,7 +62,10 @@ def generate_report(data: ReportRequest, db = Depends(get_db)):
 
             if len(fichajes) > 0:
                 print(f"      Primer fichaje: fecha={fichajes[0].fecha}, horas={fichajes[0].horas_trabajadas}")
+            else:
+                print(f"      ⚠️ ADVERTENCIA: La lista de fichajes está vacía")
 
+            print(f"   🔄 Llamando a generador de {data.format} individual...")
             if data.format == "pdf":
                 generator.generar_pdf_empleado(emp, fichajes, start, end, filepath)
             else:
@@ -74,7 +78,10 @@ def generate_report(data: ReportRequest, db = Depends(get_db)):
 
             if len(fichajes) > 0:
                 print(f"      Primer fichaje: fecha={fichajes[0][0].fecha}, empleado={fichajes[0][1].nombre}")
+            else:
+                print(f"      ⚠️ ADVERTENCIA: La lista de fichajes globales está vacía")
 
+            print(f"   🔄 Llamando a generador de {data.format} global...")
             if data.format == "pdf":
                  generator.generar_pdf_todos(fichajes, start, end, filepath)
             else:

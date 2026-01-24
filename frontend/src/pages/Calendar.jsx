@@ -113,8 +113,28 @@ function CalendarPage() {
         : [];
   };
 
+  const getShortName = (fullName) => {
+      if (!fullName) return '';
+      const parts = fullName.split(' ');
+      return parts[0]; 
+  };
+
+  const getStatusText = (evt) => {
+      const props = evt.extendedProps || {};
+      if (props.type === 'attendance') return props.late ? 'Tarde' : 'OK';
+      
+      if (props.type === 'vacation' || props.type === 'absence') {
+          const estado = props.estado || '';
+          if (estado === 'aprobada' || estado === 'justificada') return 'Aprobado';
+          if (estado === 'rechazada') return 'Rechazado';
+          if (estado === 'pendiente' || estado === 'pendiente_justificar' || estado === 'notificada') return 'Pendiente';
+          return estado.replace(/_/g, ' ').substring(0, 8); // Fallback truncado
+      }
+      return '';
+  };
+
   return (
-    <div className="p-8 h-full flex flex-col">
+    <div className="p-8 flex flex-col min-h-full">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
@@ -142,9 +162,9 @@ function CalendarPage() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 flex-1 flex flex-col overflow-hidden">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 flex flex-col">
         {/* Days Header */}
-        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50 rounded-t-[2rem]">
           {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
             <div key={day} className="py-4 text-center text-sm font-bold text-slate-400 uppercase tracking-wider">
               {day}
@@ -153,7 +173,7 @@ function CalendarPage() {
         </div>
 
         {/* Days Grid */}
-        <div className="grid grid-cols-7 grid-rows-6 flex-1">
+        <div className="grid grid-cols-7 auto-rows-fr">
           {getDaysInMonth().map((day, idx) => {
             const dayEventsList = getEventsForRender(day.date);
             const isToday = day.date.toDateString() === new Date().toDateString();
@@ -162,9 +182,9 @@ function CalendarPage() {
               <div 
                 key={idx} 
                 onClick={() => handleDayClick(day)}
-                className={`border-b border-r border-slate-100 p-2 relative hover:bg-slate-50 transition-colors cursor-pointer group flex flex-col items-center justify-start gap-1 ${
+                className={`border-b border-r border-slate-100 p-2 min-h-[140px] relative hover:bg-slate-50 transition-colors cursor-pointer group flex flex-col items-center justify-start gap-1 ${
                   !day.isCurrentMonth ? 'bg-slate-50/30 text-slate-300' : 'text-slate-700'
-                }`}
+                } ${idx >= 35 ? 'border-b-0' : ''} ${idx % 7 === 6 ? 'border-r-0' : ''} ${idx >= 35 && idx % 7 === 0 ? 'rounded-bl-[2rem]' : ''} ${idx >= 35 && idx % 7 === 6 ? 'rounded-br-[2rem]' : ''}`}
               >
                 <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold mb-1 ${
                   isToday ? 'bg-primary text-white shadow-md shadow-primary/30' : ''
@@ -172,18 +192,27 @@ function CalendarPage() {
                   {day.date.getDate()}
                 </span>
                 
-                {/* Event Indicators (Dots) */}
-                <div className="flex gap-1 flex-wrap justify-center content-start px-2 w-full">
-                    {dayEventsList.slice(0, 4).map((evt, i) => (
+                {/* Event List */}
+                <div className="flex flex-col gap-1 w-full px-1 mt-1 overflow-hidden">
+                    {dayEventsList.slice(0, 3).map((evt, i) => (
                         <div 
                             key={i} 
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: evt.backgroundColor }}
-                            title={evt.title}
-                        />
+                            className="text-[10px] px-1.5 py-0.5 rounded truncate font-bold flex justify-between items-center gap-1 shadow-sm"
+                            style={{ 
+                                backgroundColor: evt.backgroundColor ? `${evt.backgroundColor}15` : '#f1f5f9', // Muy suave
+                                color: evt.backgroundColor || '#64748b',
+                                borderLeft: `3px solid ${evt.backgroundColor || '#cbd5e1'}`
+                            }}
+                            title={`${evt.title} - ${getStatusText(evt)}`}
+                        >
+                            <span className="truncate font-semibold">{getShortName(evt.extendedProps?.employee)}</span>
+                            <span className="text-[9px] opacity-90 shrink-0">{getStatusText(evt)}</span>
+                        </div>
                     ))}
-                    {dayEventsList.length > 4 && (
-                        <span className="text-[9px] text-slate-400 font-bold leading-none">+</span>
+                    {dayEventsList.length > 3 && (
+                        <div className="text-[10px] text-slate-400 font-bold px-1 text-center">
+                            +{dayEventsList.length - 3} más
+                        </div>
                     )}
                 </div>
               </div>
@@ -271,9 +300,18 @@ function CalendarPage() {
                                 key={evt.id}
                                 className="p-4 rounded-xl border-l-4 bg-blue-50 hover:bg-blue-100 hover:shadow-md transition-all border-blue-500"
                               >
-                                <h4 className="font-bold text-slate-800 text-sm mb-1">
-                                  {evt.extendedProps.employee}
-                                </h4>
+                                <div className="flex justify-between items-start mb-1">
+                                    <h4 className="font-bold text-slate-800 text-sm">
+                                    {evt.extendedProps.employee}
+                                    </h4>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                                        evt.extendedProps.estado === 'aprobada' ? 'bg-green-100 text-green-700 border-green-200' :
+                                        evt.extendedProps.estado === 'rechazada' ? 'bg-red-100 text-red-700 border-red-200' :
+                                        'bg-amber-100 text-amber-700 border-amber-200'
+                                    }`}>
+                                        {evt.extendedProps.estado?.replace(/_/g, ' ')}
+                                    </span>
+                                </div>
                                 <div className="flex items-center gap-2 text-xs">
                                   <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">
                                     De Vacaciones
@@ -295,9 +333,18 @@ function CalendarPage() {
                                 key={evt.id}
                                 className="p-4 rounded-xl border-l-4 bg-red-50 hover:bg-red-100 hover:shadow-md transition-all border-red-500"
                               >
-                                <h4 className="font-bold text-slate-800 text-sm mb-2">
-                                  {evt.extendedProps.employee}
-                                </h4>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="font-bold text-slate-800 text-sm">
+                                    {evt.extendedProps.employee}
+                                    </h4>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                                        ['aprobada', 'justificada'].includes(evt.extendedProps.estado) ? 'bg-green-100 text-green-700 border-green-200' :
+                                        evt.extendedProps.estado === 'rechazada' ? 'bg-red-100 text-red-700 border-red-200' :
+                                        'bg-amber-100 text-amber-700 border-amber-200'
+                                    }`}>
+                                        {evt.extendedProps.estado?.replace(/_/g, ' ')}
+                                    </span>
+                                </div>
                                 <div className="space-y-1 text-xs">
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium text-slate-600">Tipo:</span>

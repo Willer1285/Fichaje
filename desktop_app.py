@@ -7,14 +7,41 @@ import time
 import base64
 import json
 
-# Añadir la carpeta backend al path de Python para poder importar app.main
-backend_path = os.path.join(os.getcwd(), "backend")
-sys.path.append(backend_path)
+# Configurar path para importar el backend
+if getattr(sys, 'frozen', False):
+    # En modo ejecutable, PyInstaller maneja los imports
+    pass
+else:
+    # En desarrollo, añadir carpeta backend
+    backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+    sys.path.append(backend_path)
 
-# Importar la instancia de FastAPI
+# Importar la instancia de FastAPI y utilidades
 from app.main import app
+from app.utils import paths
 
 class Api:
+    def __init__(self):
+        self.window = None
+
+    def set_window(self, window):
+        self.window = window
+
+    def minimize(self):
+        if self.window:
+            self.window.minimize()
+
+    def maximize(self):
+        if self.window:
+            if self.window.on_top: # No hay is_maximized directo fiable, pero toggleamos
+                self.window.restore()
+            else:
+                self.window.maximize()
+
+    def close(self):
+        if self.window:
+            self.window.destroy()
+
     def save_file(self, filename, content_base64):
         """
         Guarda un archivo en la carpeta de Descargas del usuario.
@@ -64,9 +91,9 @@ def start_server():
 
 if __name__ == '__main__':
     # Verificar si el frontend está compilado
-    dist_path = os.path.join(os.getcwd(), "frontend", "dist")
+    dist_path = paths.get_frontend_dist_path()
     if not os.path.exists(dist_path):
-        print("ADVERTENCIA: No se encontró la carpeta 'frontend/dist'.")
+        print(f"ADVERTENCIA: No se encontró la carpeta '{dist_path}'.")
         print("Por favor ejecuta 'cd frontend && npm run build' antes de iniciar la aplicación.")
         print("La aplicación intentará ejecutarse, pero el frontend no cargará correctamente.")
 
@@ -76,24 +103,40 @@ if __name__ == '__main__':
     t.daemon = True
     t.start()
     
-    # Esperar brevemente a que el servidor arranque
-    time.sleep(2)
+    # Esperar a que el servidor arranque (verificando el puerto)
+    import socket
+    start_time = time.time()
+    server_ready = False
+    while time.time() - start_time < 15:
+        try:
+            with socket.create_connection(("127.0.0.1", 45678), timeout=0.5):
+                server_ready = True
+                break
+        except (OSError, ConnectionRefusedError):
+            time.sleep(0.1)
     
+    if not server_ready:
+        print("Advertencia: El servidor backend tarda en responder...")
+
     # Crear instancia de la API
     api = Api()
     
     # Crear la ventana nativa apuntando al servidor local
     # Esta ventana actuará como una aplicación de escritorio independiente del navegador del usuario
-    webview.create_window(
-        title='TimeTrack Pro - Control de Asistencia',
+    window = webview.create_window(
+        title='Fichaje Zaragonjg v1.0',
         url='http://127.0.0.1:45678',
         width=1200,
         height=800,
         resizable=True,
         min_size=(800, 600),
-        js_api=api  # Exponer la API al frontend
+        js_api=api,  # Exponer la API al frontend
+        frameless=True,
+        easy_drag=False # Controlamos el arrastre manualmente
     )
     
+    api.set_window(window)
+
     # Iniciar el loop de la interfaz gráfica
     print("Iniciando aplicación de escritorio...")
     webview.start()

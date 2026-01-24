@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, LogOut, Coffee, ArrowRight, AlertTriangle, CheckCircle, Calendar, Briefcase, Lock, Bell, X } from 'lucide-react';
 import axios from 'axios';
+import { Toast } from '../components/Toast';
 
 const API_URL = "/api";
 
@@ -9,8 +10,13 @@ function EmployeeDashboard({ user, onLogout }) {
   const [fichaje, setFichaje] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  
+  // Toast State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+
+  const showToast = (message, type = 'info') => {
+      setToast({ show: true, message, type });
+  };
   
   // Modal states
   const [showClassificationModal, setShowClassificationModal] = useState(false);
@@ -34,15 +40,69 @@ function EmployeeDashboard({ user, onLogout }) {
   
   // Forms
   const [vacationForm, setVacationForm] = useState({ start: '', end: '', type: 'vacaciones_anuales', reason: '' });
-  const [absenceForm, setAbsenceForm] = useState({ start: '', end: '', type: 'baja_medica', subtype: '', impact: 'it', reason: '' });
+  const [absenceForm, setAbsenceForm] = useState({ start: '', end: '', type: 'baja_medica', subtype: '', impact: 'it', reason: '', es_por_horas: false, horas: 0 });
   const [forcedJustificationForm, setForcedJustificationForm] = useState({ type: 'ausencia_injustificada', reason: '' });
 
-  // Auto-logout timer
+  // Refs
   const logoutTimerRef = useRef(null);
+  const notificationRef = useRef(null);
+
+  // Close notifications on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+            setShowNotifications(false);
+        }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const [calculatedDays, setCalculatedDays] = useState(0);
+
+  useEffect(() => {
+    if (vacationForm.start && vacationForm.end) {
+        const start = new Date(vacationForm.start);
+        const end = new Date(vacationForm.end);
+        
+        if (start <= end) {
+            let count = 0;
+            const curDate = new Date(start);
+            while (curDate <= end) {
+                const dayOfWeek = curDate.getDay();
+                if(dayOfWeek !== 0 && dayOfWeek !== 6) count++; // Excluir sabado (6) y domingo (0)
+                curDate.setDate(curDate.getDate() + 1);
+            }
+            setCalculatedDays(count);
+        } else {
+            setCalculatedDays(0);
+        }
+    } else {
+        setCalculatedDays(0);
+    }
+  }, [vacationForm.start, vacationForm.end]);
+
+  // Helper para formato hora AM/PM
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '--:--';
+    try {
+        // Asumiendo formato HH:MM o HH:MM:SS
+        const [hours, minutes] = timeStr.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours));
+        date.setMinutes(parseInt(minutes));
+        return date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch (e) {
+        return timeStr;
+    }
+  };
 
   useEffect(() => {
     // Clock tick
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    
+    // Notification polling (every 30 seconds)
+    const notifTimer = setInterval(fetchNotifications, 30000);
     
     // Fetch initial status
     fetchStatus();
@@ -56,6 +116,7 @@ function EmployeeDashboard({ user, onLogout }) {
 
     return () => {
       clearInterval(timer);
+      clearInterval(notifTimer);
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       window.removeEventListener('mousemove', resetLogoutTimer);
       window.removeEventListener('keypress', resetLogoutTimer);
@@ -130,11 +191,11 @@ function EmployeeDashboard({ user, onLogout }) {
         tipo: vacationForm.type,
         motivo: vacationForm.reason
       });
-      setSuccess("Solicitud de vacaciones enviada");
+      showToast("Solicitud de vacaciones enviada", 'success');
       setShowVacationModal(false);
       setVacationForm({ start: '', end: '', type: 'vacaciones_anuales', reason: '' });
     } catch (err) {
-      setError(err.response?.data?.detail || "Error al enviar solicitud");
+      showToast(err.response?.data?.detail || "Error al enviar solicitud", 'error');
     } finally {
       setLoading(false);
     }
@@ -147,17 +208,19 @@ function EmployeeDashboard({ user, onLogout }) {
       await axios.post(`${API_URL}/requests/absences`, {
         employee_id: user.id,
         fecha_inicio: absenceForm.start,
-        fecha_fin: absenceForm.end,
+        fecha_fin: absenceForm.es_por_horas ? absenceForm.start : absenceForm.end,
         tipo: absenceForm.type,
         subtipo: absenceForm.subtype,
         motivo: absenceForm.reason,
-        impacta_nomina: absenceForm.impact
+        impacta_nomina: absenceForm.impact,
+        es_por_horas: absenceForm.es_por_horas,
+        horas_solicitadas: absenceForm.es_por_horas ? parseFloat(absenceForm.horas) : 0
       });
-      setSuccess("Notificación de ausencia enviada");
+      showToast("Solicitud de permiso enviada", 'success');
       setShowAbsenceModal(false);
-      setAbsenceForm({ start: '', end: '', type: 'baja_medica', subtype: '', impact: 'it', reason: '' });
+      setAbsenceForm({ start: '', end: '', type: 'baja_medica', subtype: '', impact: 'it', reason: '', es_por_horas: false, horas: 0 });
     } catch (err) {
-      setError(err.response?.data?.detail || "Error al enviar notificación");
+      showToast(err.response?.data?.detail || "Error al enviar solicitud", 'error');
     } finally {
       setLoading(false);
     }
@@ -165,8 +228,6 @@ function EmployeeDashboard({ user, onLogout }) {
 
   const handleClockAction = async (action, type = "normal", pin = null) => {
     setLoading(true);
-    setError('');
-    setSuccess('');
 
     try {
       const payload = {
@@ -178,7 +239,7 @@ function EmployeeDashboard({ user, onLogout }) {
 
       const response = await axios.post(`${API_URL}/attendance/clock`, payload);
       
-      setSuccess(response.data.message);
+      showToast(response.data.message, 'success');
       await fetchStatus();
       
       // Close modals
@@ -194,7 +255,7 @@ function EmployeeDashboard({ user, onLogout }) {
             setShowClassificationModal(false); // Cerrar otros
             setShowForcedJustificationModal(true);
         } else {
-            setError(err.response?.data?.detail || "Error al registrar fichaje");
+            showToast(err.response?.data?.detail || "Error al registrar fichaje", 'error');
         }
     } finally {
       setLoading(false);
@@ -204,7 +265,6 @@ function EmployeeDashboard({ user, onLogout }) {
   const submitForcedJustification = async (e) => {
       e.preventDefault();
       setLoading(true);
-      setError('');
       
       try {
           await axios.post(`${API_URL}/attendance/justify`, {
@@ -215,7 +275,7 @@ function EmployeeDashboard({ user, onLogout }) {
               fecha_fin: pendingAbsenceData.end_date
           });
           
-          setSuccess("Ausencia justificada correctamente. Fichaje registrado.");
+          showToast("Ausencia justificada correctamente. Fichaje registrado.", 'success');
           setShowForcedJustificationModal(false);
           setPendingAbsenceData(null);
           setForcedJustificationForm({ type: 'ausencia_injustificada', reason: '' });
@@ -223,7 +283,7 @@ function EmployeeDashboard({ user, onLogout }) {
           await fetchStatus(); // Refrescar para ver que ya entró
           
       } catch (err) {
-          setError(err.response?.data?.detail || "Error al justificar");
+          showToast(err.response?.data?.detail || "Error al justificar", 'error');
       } finally {
           setLoading(false);
       }
@@ -257,7 +317,7 @@ function EmployeeDashboard({ user, onLogout }) {
     } catch (err) {
         console.error("Error verifying status:", err);
         // Fallback to allowing entry if server check fails (or show error)
-        setError("Error verificando estado. Inténtalo de nuevo.");
+        showToast("Error verificando estado. Inténtalo de nuevo.", 'error');
     } finally {
         setLoading(false);
     }
@@ -298,10 +358,10 @@ function EmployeeDashboard({ user, onLogout }) {
         </div>
         
         <div className="flex items-center gap-2">
-            <div className="relative">
+            <div className="relative" ref={notificationRef}>
                 <button 
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="p-2.5 hover:bg-slate-100 rounded-full relative transition-colors text-slate-500"
+                    className={`p-2.5 hover:bg-slate-100 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 text-slate-800' : 'text-slate-500'}`}
                 >
                     <Bell size={20} />
                     {notifications.length > 0 && (
@@ -360,7 +420,7 @@ function EmployeeDashboard({ user, onLogout }) {
             {currentTime.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
           <h2 className="text-6xl font-bold text-slate-800 font-mono tracking-tight mb-4">
-            {currentTime.toLocaleTimeString('es-ES')}
+            {currentTime.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
           </h2>
           
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 ${getStatusColor()} font-bold text-sm`}>
@@ -372,11 +432,11 @@ function EmployeeDashboard({ user, onLogout }) {
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-t border-slate-100 pt-6">
               <div>
                 <p className="text-slate-400 mb-1">Entrada</p>
-                <p className="font-bold text-slate-700">{fichaje.hora_entrada || '--:--'}</p>
+                <p className="font-bold text-slate-700">{formatTime(fichaje.hora_entrada)}</p>
               </div>
               <div>
                 <p className="text-slate-400 mb-1">Salida</p>
-                <p className="font-bold text-slate-700">{fichaje.hora_salida || '--:--'}</p>
+                <p className="font-bold text-slate-700">{formatTime(fichaje.hora_salida)}</p>
               </div>
               <div className="col-span-2 md:col-span-2">
                 <p className="text-slate-400 mb-1">Tipo</p>
@@ -461,26 +521,11 @@ function EmployeeDashboard({ user, onLogout }) {
               <Briefcase size={20} />
             </div>
             <div className="text-left">
-              <p className="font-bold text-slate-700">Mis Ausencias</p>
-              <p className="text-xs text-slate-400">Justificar o notificar</p>
+              <p className="font-bold text-slate-700">Mis Permisos</p>
+              <p className="text-xs text-slate-400">Justificar o solicitar</p>
             </div>
           </button>
         </div>
-
-        {/* Messages */}
-        {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-bottom-2">
-            <AlertTriangle size={20} />
-            <p className="font-medium">{error}</p>
-          </div>
-        )}
-        
-        {success && (
-          <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl flex items-center gap-3 animate-in slide-in-from-bottom-2">
-            <CheckCircle size={20} />
-            <p className="font-medium">{success}</p>
-          </div>
-        )}
 
       </main>
 
@@ -608,7 +653,7 @@ function EmployeeDashboard({ user, onLogout }) {
               </button>
             </div>
 
-            <form onSubmit={submitVacation} className="border-t border-slate-100 pt-4">
+            <form onSubmit={submitVacation} className="border-t border-slate-100 pt-4 flex-1 overflow-y-auto">
               <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase">Nueva Solicitud</h4>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -632,6 +677,14 @@ function EmployeeDashboard({ user, onLogout }) {
                   />
                 </div>
               </div>
+              
+              {calculatedDays > 0 && (
+                <div className={`mb-3 p-3 rounded-lg flex justify-between items-center ${calculatedDays + vacationBalance.consumido > 30 ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
+                    <span className="text-xs font-bold uppercase">Días Solicitados:</span>
+                    <span className="font-bold text-lg">{calculatedDays} días</span>
+                </div>
+              )}
+
               <div className="mb-3">
                 <label className="text-xs font-bold text-slate-500">Motivo</label>
                 <input 
@@ -663,52 +716,101 @@ function EmployeeDashboard({ user, onLogout }) {
         </div>
       )}
 
-      {/* Modal Ausencias */}
+      {/* Modal Permisos / Ausencias */}
       {showAbsenceModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 animate-in zoom-in-95 h-[80vh] flex flex-col">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 animate-in zoom-in-95 h-[85vh] flex flex-col">
             <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Briefcase className="text-purple-600" /> Mis Ausencias
+              <Briefcase className="text-purple-600" /> Mis Permisos
             </h3>
 
-            <div className="mb-6">
-              <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase">Historial</h4>
+            <div className="mb-4">
+              <h4 className="font-bold text-slate-700 mb-2 text-sm uppercase">Historial</h4>
               <button 
                 onClick={() => {
                     setHistoryType('absence');
                     setShowHistoryModal(true);
                 }}
-                className="w-full py-4 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-sm"
               >
-                <Briefcase size={20} />
-                Ver Historial Completo ({absenceHistory.length})
+                <Briefcase size={18} />
+                Ver Historial ({absenceHistory.length})
               </button>
             </div>
 
-            <form onSubmit={submitAbsence} className="border-t border-slate-100 pt-4">
-              <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase">Notificar Ausencia Futura</h4>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-500">Desde</label>
-                  <input 
-                    type="date" 
-                    required 
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm"
-                    value={absenceForm.start}
-                    onChange={e => setAbsenceForm({...absenceForm, start: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500">Hasta</label>
-                  <input 
-                    type="date" 
-                    required 
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm"
-                    value={absenceForm.end}
-                    onChange={e => setAbsenceForm({...absenceForm, end: e.target.value})}
-                  />
-                </div>
+            <form onSubmit={submitAbsence} className="border-t border-slate-100 pt-4 flex-1 overflow-y-auto">
+              <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase">Nuevo Permiso</h4>
+              
+              {/* Switch Tipo Duración */}
+              <div className="flex bg-slate-100 p-1 rounded-lg mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setAbsenceForm({...absenceForm, es_por_horas: false})}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${!absenceForm.es_por_horas ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Por Días
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAbsenceForm({...absenceForm, es_por_horas: true})}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${absenceForm.es_por_horas ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Por Horas
+                  </button>
               </div>
+
+              {absenceForm.es_por_horas ? (
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Fecha</label>
+                      <input 
+                        type="date" 
+                        required 
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                        value={absenceForm.start}
+                        onChange={e => setAbsenceForm({...absenceForm, start: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Horas</label>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0.5"
+                        step="0.5"
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                        placeholder="Ej: 2.5"
+                        value={absenceForm.horas}
+                        onChange={e => setAbsenceForm({...absenceForm, horas: e.target.value})}
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">* Max: media jornada</p>
+                    </div>
+                  </div>
+              ) : (
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Desde</label>
+                      <input 
+                        type="date" 
+                        required 
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                        value={absenceForm.start}
+                        onChange={e => setAbsenceForm({...absenceForm, start: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Hasta</label>
+                      <input 
+                        type="date" 
+                        required 
+                        className="w-full p-2 border border-slate-200 rounded-lg text-sm"
+                        value={absenceForm.end}
+                        onChange={e => setAbsenceForm({...absenceForm, end: e.target.value})}
+                      />
+                    </div>
+                  </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="text-xs font-bold text-slate-500">Tipo</label>
@@ -836,7 +938,7 @@ function EmployeeDashboard({ user, onLogout }) {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 {historyType === 'vacation' ? <Calendar className="text-blue-600" /> : <Briefcase className="text-purple-600" />}
-                Historial de {historyType === 'vacation' ? 'Vacaciones' : 'Ausencias'}
+                Historial de {historyType === 'vacation' ? 'Vacaciones' : 'Permisos'}
               </h3>
               <button 
                 onClick={() => setShowHistoryModal(false)}
@@ -873,6 +975,14 @@ function EmployeeDashboard({ user, onLogout }) {
                           {req.estado?.replace(/_/g, ' ')}
                         </span>
                       </div>
+
+                      {/* Mostrar detalles de horas si aplica */}
+                      {req.es_por_horas && (
+                          <div className="mb-2 inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-bold border border-purple-100">
+                              <Clock size={12} />
+                              {req.horas_solicitadas} horas solicitadas
+                          </div>
+                      )}
                       
                       {req.motivo_empleado && (
                         <div className="mt-2 text-sm text-slate-600 bg-slate-50 p-2 rounded-lg">
@@ -910,6 +1020,15 @@ function EmployeeDashboard({ user, onLogout }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
       )}
 
     </div>

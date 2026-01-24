@@ -8,8 +8,8 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 def get_admin_notifications(db = Depends(get_db)):
     try:
         # Get pending requests
-        pending = db.obtener_solicitudes_pendientes()
-        absences = db.obtener_ausencias_pendientes_admin()
+        pending = db.obtener_solicitudes_vacaciones_admin(estado='pendiente')
+        absences = db.obtener_ausencias_admin(estado='pendiente')
         
         notifs = []
         for req, emp in pending:
@@ -739,8 +739,8 @@ def get_employee_notifications(employee_id: int, db = Depends(get_db)):
             if a.estado in ['aprobada', 'rechazada']:
                 all_items.append({
                     "id": f"abs_{a.id}",
-                    "title": f"Ausencia {a.estado}",
-                    "desc": f"Justificación {a.estado}",
+                    "title": f"Permiso {a.estado}",
+                    "desc": f"Solicitud {a.estado}",
                     "date": a.fecha_aprobacion or datetime.now(),
                     "type": "success" if a.estado == 'aprobada' else "error"
                 })
