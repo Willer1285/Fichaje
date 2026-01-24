@@ -1,12 +1,43 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.routers import employees, attendance, auth, requests, reports, config, departments, locations, schedules, notifications, calendar
 from app.utils import paths
 import os
+import sys
+import logging
+import time
+
+# Configurar logging si estamos en modo desktop
+if getattr(sys, 'frozen', False) or os.environ.get('DESKTOP_MODE'):
+    try:
+        from app.utils.logger import setup_logging
+        setup_logging(log_to_file=True)
+        logging.info("📝 Sistema de logging inicializado para modo desktop")
+    except Exception as e:
+        print(f"⚠️ Error configurando logging en main.py: {e}")
 
 app = FastAPI(title="TimeTrack Pro API", version="2.0.0")
+
+# Middleware para logging de requests (solo en modo desktop/producción)
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+
+    # Log de request entrante
+    if getattr(sys, 'frozen', False) or os.environ.get('DESKTOP_MODE'):
+        logging.info(f"📥 {request.method} {request.url.path}")
+
+    response = await call_next(request)
+
+    # Log de response
+    duration = time.time() - start_time
+    if getattr(sys, 'frozen', False) or os.environ.get('DESKTOP_MODE'):
+        status_emoji = "✅" if response.status_code < 400 else "❌"
+        logging.info(f"{status_emoji} {request.method} {request.url.path} - Status: {response.status_code} - Duration: {duration:.3f}s")
+
+    return response
 
 # Servir archivos estáticos (uploads)
 # Usamos paths.get_uploads_path() que asegura la ruta persistente y crea el directorio

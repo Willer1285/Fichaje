@@ -6,6 +6,7 @@ import os
 import time
 import base64
 import json
+import logging
 
 # Configurar path para importar el backend
 if getattr(sys, 'frozen', False):
@@ -19,6 +20,7 @@ else:
 # Importar la instancia de FastAPI y utilidades
 from app.main import app
 from app.utils import paths
+from app.utils.logger import setup_logging
 
 class Api:
     def __init__(self):
@@ -85,20 +87,42 @@ class Api:
 
 def start_server():
     """Inicia el servidor backend en el puerto 45678"""
+    # Establecer variable de entorno para indicar modo desktop
+    os.environ['DESKTOP_MODE'] = '1'
+
+    logging.info("🚀 Iniciando servidor Uvicorn...")
+    logging.info("   Host: 127.0.0.1")
+    logging.info("   Puerto: 45678")
+
     # Usamos un puerto poco común para evitar conflictos
-    # log_level="error" para no ensuciar la consola, a menos que haya problemas
     uvicorn.run(app, host="127.0.0.1", port=45678, log_level="info")
 
 if __name__ == '__main__':
+    # Configurar logging al inicio
+    try:
+        log_file = setup_logging(log_to_file=True)
+        logging.info("="*80)
+        logging.info("🚀 INICIANDO FICHAJE ZARAGONJG - VERSIÓN DESKTOP")
+        logging.info(f"📁 Archivo de logs: {log_file}")
+        logging.info(f"💻 Modo: {'Ejecutable' if getattr(sys, 'frozen', False) else 'Desarrollo'}")
+        logging.info(f"🐍 Python version: {sys.version}")
+        logging.info("="*80)
+    except Exception as e:
+        print(f"⚠️ Error configurando logging: {e}")
+        print("Continuando sin logging a archivo...")
+
     # Verificar si el frontend está compilado
     dist_path = paths.get_frontend_dist_path()
     if not os.path.exists(dist_path):
-        print(f"ADVERTENCIA: No se encontró la carpeta '{dist_path}'.")
+        msg = f"ADVERTENCIA: No se encontró la carpeta '{dist_path}'."
+        logging.warning(msg)
+        print(msg)
         print("Por favor ejecuta 'cd frontend && npm run build' antes de iniciar la aplicación.")
         print("La aplicación intentará ejecutarse, pero el frontend no cargará correctamente.")
 
     # Iniciar el servidor backend en un hilo separado
     # daemon=True asegura que el hilo se cierre cuando el programa principal termine
+    logging.info("🔧 Iniciando servidor backend en hilo separado...")
     t = threading.Thread(target=start_server)
     t.daemon = True
     t.start()
@@ -107,22 +131,33 @@ if __name__ == '__main__':
     import socket
     start_time = time.time()
     server_ready = False
+    logging.info("⏳ Esperando a que el servidor backend esté listo...")
     while time.time() - start_time < 15:
         try:
             with socket.create_connection(("127.0.0.1", 45678), timeout=0.5):
                 server_ready = True
+                elapsed = time.time() - start_time
+                logging.info(f"✅ Servidor backend listo en {elapsed:.2f} segundos")
                 break
         except (OSError, ConnectionRefusedError):
             time.sleep(0.1)
-    
+
     if not server_ready:
-        print("Advertencia: El servidor backend tarda en responder...")
+        msg = "⚠️ Advertencia: El servidor backend tarda en responder..."
+        logging.warning(msg)
+        print(msg)
 
     # Crear instancia de la API
     api = Api()
-    
+    logging.info("📡 Instancia de API creada para comunicación con webview")
+
     # Crear la ventana nativa apuntando al servidor local
     # Esta ventana actuará como una aplicación de escritorio independiente del navegador del usuario
+    logging.info("🪟 Creando ventana de aplicación...")
+    logging.info(f"   URL: http://127.0.0.1:45678")
+    logging.info(f"   Tamaño: 1400x900")
+    logging.info(f"   Frameless: False (con barra de título)")
+
     window = webview.create_window(
         title='Fichaje Zaragonjg v1.0',
         url='http://127.0.0.1:45678',
@@ -134,9 +169,12 @@ if __name__ == '__main__':
         frameless=False,  # FALSE para mostrar barra de título de Windows
         easy_drag=False
     )
-    
+
     api.set_window(window)
 
     # Iniciar el loop de la interfaz gráfica
+    logging.info("🎨 Iniciando aplicación de escritorio...")
     print("Iniciando aplicación de escritorio...")
     webview.start()
+
+    logging.info("👋 Aplicación cerrada por el usuario")
