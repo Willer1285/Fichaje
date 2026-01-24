@@ -56,14 +56,26 @@ function Login({ onLogin }) {
     setAdminError('');
     setAdminLoading(true);
 
+    console.log('🔐 [LOGIN FRONTEND] Iniciando proceso de login...');
+    console.log('   DNI ingresado:', dni);
+    console.log('   Contraseña ingresada:', password);
+    console.log('   URL de login:', `${API_URL}/auth/login`);
+
     try {
+      console.log('📤 [LOGIN FRONTEND] Enviando request al backend...');
       const response = await axios.post(`${API_URL}/auth/login`, {
         dni,
         password
       });
+
+      console.log('✅ [LOGIN FRONTEND] Respuesta recibida:', response.data);
       localStorage.setItem('user', JSON.stringify(response.data));
       onLogin(response.data);
     } catch (err) {
+      console.error('❌ [LOGIN FRONTEND] Error en login:');
+      console.error('   Status:', err.response?.status);
+      console.error('   Detail:', err.response?.data?.detail);
+      console.error('   Full error:', err);
       setAdminError(err.response?.data?.detail || 'Error al iniciar sesión');
     } finally {
       setAdminLoading(false);

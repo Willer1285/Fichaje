@@ -18,6 +18,16 @@ class DatabaseManager:
 
     def __init__(self, db_path: str = "fichaje.db"):
         self.db_path = db_path
+        print(f"\n💾 [DATABASE] Inicializando base de datos:")
+        print(f"   Ruta: {os.path.abspath(self.db_path)}")
+        print(f"   Existe: {os.path.exists(self.db_path)}")
+
+        # Verificar permisos de escritura en el directorio
+        db_dir = os.path.dirname(os.path.abspath(self.db_path)) or '.'
+        print(f"   Directorio: {db_dir}")
+        print(f"   Directorio existe: {os.path.exists(db_dir)}")
+        print(f"   Permisos escritura: {os.access(db_dir, os.W_OK)}")
+
         self._init_database()
 
     def parse_datetime(self, date_str: str) -> Optional[datetime]:
@@ -462,13 +472,19 @@ class DatabaseManager:
             # Importar hash_password aquí para asegurar disponibilidad si se mueve el código
             from app.utils.security import hash_password
             admin_pass_hash = hash_password("admin123")
-            
+
+            print(f"\n🔑 [DB INIT] Verificando usuario administrador...")
+            print(f"   DNI del admin: {admin_dni}")
+            print(f"   Password hash generado: {admin_pass_hash[:20]}... (longitud: {len(admin_pass_hash)})")
+
             cursor.execute("SELECT COUNT(*) FROM empleados WHERE dni = ?", (admin_dni,))
-            if cursor.fetchone()[0] == 0:
-                print("Creando usuario administrador por defecto...")
+            admin_existe = cursor.fetchone()[0]
+
+            if admin_existe == 0:
+                print("   ⚙️  Creando usuario administrador por defecto...")
                 cursor.execute("""
                     INSERT INTO empleados (
-                        nombre, apellidos, dni, telefono, numero_empleado, 
+                        nombre, apellidos, dni, telefono, numero_empleado,
                         tipo_jornada, es_admin, es_superadmin, password_hash, activo,
                         fecha_alta
                     ) VALUES (
@@ -476,15 +492,30 @@ class DatabaseManager:
                         'completa', 1, 1, ?, 1, ?
                     )
                 """, (admin_dni, admin_pass_hash, datetime.now()))
+                print(f"   ✅ Usuario administrador creado exitosamente")
             else:
                 # Asegurar que el admin tenga la contraseña correcta y permisos
                 # Esto garantiza acceso incluso si la BD ya existía con otra clave
-                print("Asegurando credenciales de administrador por defecto...")
+                print(f"   ⚙️  Administrador ya existe. Actualizando credenciales...")
                 cursor.execute("""
-                    UPDATE empleados 
+                    UPDATE empleados
                     SET password_hash = ?, es_superadmin = 1, es_admin = 1, activo = 1
                     WHERE dni = ?
                 """, (admin_pass_hash, admin_dni))
+                print(f"   ✅ Credenciales del administrador actualizadas")
+
+            # Verificar que el administrador quedó correctamente configurado
+            cursor.execute("SELECT dni, nombre, apellidos, es_admin, es_superadmin, activo FROM empleados WHERE dni = ?", (admin_dni,))
+            admin_row = cursor.fetchone()
+            if admin_row:
+                print(f"   📋 Verificación final del admin:")
+                print(f"      DNI: {admin_row[0]}")
+                print(f"      Nombre: {admin_row[1]} {admin_row[2]}")
+                print(f"      Es Admin: {admin_row[3]}")
+                print(f"      Es Superadmin: {admin_row[4]}")
+                print(f"      Activo: {admin_row[5]}")
+            else:
+                print(f"   ⚠️  ADVERTENCIA: No se pudo verificar el administrador")
 
             conn.commit()
 
@@ -528,13 +559,24 @@ class DatabaseManager:
 
     def obtener_empleado_por_dni(self, dni: str) -> Optional[Employee]:
         """Obtiene un empleado por DNI"""
+        print(f"\n🔍 [DB] Buscando empleado por DNI: '{dni}'")
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM empleados WHERE dni = ? AND activo = 1", (dni,))
             row = cursor.fetchone()
             if row:
+                print(f"   ✓ Empleado encontrado en BD")
                 return self._row_to_employee(row)
-            return None
+            else:
+                print(f"   ✗ No se encontró empleado con DNI '{dni}' (activo)")
+                # Verificar si existe pero está inactivo
+                cursor.execute("SELECT COUNT(*) FROM empleados WHERE dni = ?", (dni,))
+                existe = cursor.fetchone()[0]
+                if existe > 0:
+                    print(f"   ⚠️  El empleado existe pero está INACTIVO")
+                else:
+                    print(f"   ⚠️  El empleado NO EXISTE en la base de datos")
+                return None
 
     def listar_empleados(self, incluir_inactivos: bool = False) -> List[Employee]:
         """Lista todos los empleados"""
