@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Plus, Edit2, Trash2, Shield, User, Phone, Mail, Eye, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Shield, User, Phone, Mail, Eye, X, Sparkles } from 'lucide-react';
 import { TypeSelectionModal, EmployeeFormModal, EmployeeCardModal } from '../components/EmployeeModals';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { AlertDialog } from '../components/AlertDialog';
@@ -12,6 +12,7 @@ function Employees() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
+  const [newlyAddedId, setNewlyAddedId] = useState(null); // Para animación de nuevo empleado
 
   // Modales
   const [showTypeSelection, setShowTypeSelection] = useState(false);
@@ -161,7 +162,14 @@ function Employees() {
           </thead>
           <tbody className="divide-y divide-slate-50">
             {Array.isArray(filteredEmployees) && filteredEmployees.map((emp) => (
-              <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
+              <tr
+                key={emp.id}
+                className={`hover:bg-slate-50/80 transition-all duration-300 ${
+                  newlyAddedId === emp.id
+                    ? 'new-employee-animation bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-l-4 border-l-emerald-500'
+                    : ''
+                }`}
+              >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {emp.foto_path ? (
@@ -171,10 +179,18 @@ function Employees() {
                         {(emp.nombre?.charAt(0) || '')}{(emp.apellidos?.charAt(0) || '')}
                         </div>
                     )}
-                    <div>
-                      <p className="font-bold text-slate-800 text-sm">
-                        {emp.primer_nombre || emp.nombre?.split(' ')[0] || emp.nombre} {emp.primer_apellido || emp.apellidos?.split(' ')[0] || emp.apellidos}
-                      </p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-slate-800 text-sm">
+                          {emp.primer_nombre || emp.nombre?.split(' ')[0] || emp.nombre} {emp.primer_apellido || emp.apellidos?.split(' ')[0] || emp.apellidos}
+                        </p>
+                        {newlyAddedId === emp.id && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-sm animate-pulse">
+                            <Sparkles size={12} />
+                            NUEVO
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-400 font-mono">{emp.dni}</p>
                     </div>
                   </div>
@@ -282,11 +298,28 @@ function Employees() {
             employee={editingEmployee}
             catalogs={{ departments, locations, schedules }}
             config={config}
-            onSuccess={async () => {
+            onSuccess={async (newEmployeeId) => {
               console.log('✅ [Employees] onSuccess called after save');
+              console.log('📝 [Employees] newEmployeeId recibido:', newEmployeeId);
+
+              // Cerrar el modal (ya se cerró en el modal, pero por si acaso)
               setShowFormModal(false);
               setImageTimestamp(Date.now()); // Forzar recarga de imágenes
+
+              // Recargar la lista de empleados
               await fetchEmployees();
+
+              // Si se creó un nuevo empleado (ID proporcionado), animarlo
+              if (newEmployeeId && !editingEmployee) {
+                console.log('✨ [Employees] Animando nuevo empleado con ID:', newEmployeeId);
+                setNewlyAddedId(newEmployeeId);
+
+                // Quitar el resaltado después de 3 segundos
+                setTimeout(() => {
+                  console.log('🔄 [Employees] Removiendo animación del empleado:', newEmployeeId);
+                  setNewlyAddedId(null);
+                }, 3000);
+              }
 
               // Si el empleado editado es el usuario actual, actualizar localStorage
               const currentUser = JSON.parse(localStorage.getItem('user') || '{}');

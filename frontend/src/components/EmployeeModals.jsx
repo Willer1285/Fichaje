@@ -204,13 +204,28 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
         }
 
         try {
+            let createdEmployeeId = null;
+
             if (isEdit) {
                 await axios.put(`${API_URL}/employees/${employee.id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
             } else {
-                await axios.post(`${API_URL}/employees`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const response = await axios.post(`${API_URL}/employees`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+                // Capturar el ID del empleado recién creado
+                createdEmployeeId = response.data?.id || response.data?.empleado_id || null;
+                console.log('🆕 [EmployeeFormModal] Nuevo empleado creado con ID:', createdEmployeeId);
             }
-            if(onSuccess) onSuccess();
+
+            // Cerrar modal antes de llamar onSuccess para mejor UX
             onClose();
+
+            // Llamar callback con el ID del nuevo empleado si existe
+            if(onSuccess) {
+                if (createdEmployeeId) {
+                    onSuccess(createdEmployeeId);
+                } else {
+                    onSuccess();
+                }
+            }
         } catch (error) {
             setAlertDialog({
                 isOpen: true,
