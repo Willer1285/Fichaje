@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Users, Clock, Settings, LogOut, Bell, Search, Plus, Calendar as CalendarIcon, X, Filter, Download, AlertTriangle, ChevronLeft, Menu, Fingerprint } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Settings, LogOut, Bell, Calendar as CalendarIcon, X, Filter, Download, AlertTriangle, ChevronLeft, Menu, Fingerprint } from 'lucide-react';
 import axios from 'axios';
 import Login from './pages/Login';
 import EmployeeDashboard from './pages/EmployeeDashboard';
@@ -413,22 +413,21 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-primary transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Buscar..." 
-                className="pl-11 pr-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white w-64 transition-all border border-transparent focus:border-primary/10"
-              />
-            </div>
+            {/* Botón de Notificaciones - Diseño mejorado y más llamativo */}
             <div className="relative" ref={notificationRef}>
-                <button 
+                <button
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className={`p-2.5 hover:bg-slate-100 rounded-full relative transition-colors ${showNotifications ? 'bg-slate-100 text-primary' : 'text-slate-600'}`}
+                    className={`relative p-3 rounded-xl transition-all duration-300 ${
+                        showNotifications
+                            ? 'bg-primary text-white shadow-lg shadow-primary/40 scale-105'
+                            : 'bg-gradient-to-br from-primary/10 to-blue-500/10 text-primary hover:from-primary/20 hover:to-blue-500/20 hover:scale-105 hover:shadow-md'
+                    }`}
                 >
-                    <Bell className="w-5 h-5" />
+                    <Bell className={`w-6 h-6 ${notifications.length > 0 ? 'animate-pulse' : ''}`} />
                     {notifications.length > 0 && (
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-white"></span>
+                        <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/50 animate-pulse ring-2 ring-white">
+                            {notifications.length}
+                        </span>
                     )}
                 </button>
 
@@ -468,10 +467,6 @@ function App() {
                     </div>
                 )}
             </div>
-            <button onClick={() => setShowNewModal(true)} className="bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-0.5 active:translate-y-0">
-              <Plus size={18} strokeWidth={3} />
-              <span>Nuevo</span>
-            </button>
           </div>
         </header>
 
