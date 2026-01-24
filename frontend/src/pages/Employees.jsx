@@ -11,6 +11,7 @@ function Employees() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [imageTimestamp, setImageTimestamp] = useState(Date.now());
 
   // Modales
   const [showTypeSelection, setShowTypeSelection] = useState(false);
@@ -164,7 +165,7 @@ function Employees() {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {emp.foto_path ? (
-                        <img src={`${API_URL.replace('/api', '')}${emp.foto_path}`} className="w-10 h-10 rounded-full object-cover shadow-sm border border-white flex-shrink-0" alt="" />
+                        <img src={`${API_URL.replace('/api', '')}${emp.foto_path}?t=${imageTimestamp}`} className="w-10 h-10 rounded-full object-cover shadow-sm border border-white flex-shrink-0" alt="" />
                     ) : (
                         <div className="w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-sm flex-shrink-0 text-sm">
                         {(emp.nombre?.charAt(0) || '')}{(emp.apellidos?.charAt(0) || '')}
@@ -284,6 +285,7 @@ function Employees() {
             onSuccess={async () => {
               console.log('✅ [Employees] onSuccess called after save');
               setShowFormModal(false);
+              setImageTimestamp(Date.now()); // Forzar recarga de imágenes
               await fetchEmployees();
 
               // Si el empleado editado es el usuario actual, actualizar localStorage

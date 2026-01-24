@@ -276,7 +276,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-background font-sans text-slate-900 overflow-hidden">
-      <TitleBar />
+      {/* TitleBar personalizada desactivada - usando barra nativa de Windows */}
       <div className="flex flex-1 overflow-hidden relative w-full">
       {/* Sidebar */}
       <aside className={`bg-sidebar text-white flex flex-col transition-all duration-300 shadow-xl z-20 h-full ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>

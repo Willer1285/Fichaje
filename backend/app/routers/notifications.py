@@ -53,14 +53,22 @@ def get_dashboard_alerts(db = Depends(get_db)):
         config = db.obtener_configuracion()
         todos_empleados = db.listar_empleados(incluir_inactivos=False)
 
-        # 0. NUEVOS EMPLEADOS
+        # 0. NUEVOS EMPLEADOS Y ADMINISTRADORES
         for emp in todos_empleados:
             if emp.fecha_alta and emp.fecha_alta.date() == hoy.date():
+                # Diferenciar entre administrador y empleado
+                if emp.es_admin or emp.es_superadmin:
+                    title = "Nuevo Administrador"
+                    message = f"Se ha registrado al administrador {emp.nombre} {emp.apellidos}"
+                else:
+                    title = "Nuevo Empleado"
+                    message = f"Se ha registrado a {emp.nombre} {emp.apellidos}"
+
                 alerts.append({
                     "id": f"new_emp_{emp.id}",
                     "type": "info",
-                    "title": "Nuevo Empleado",
-                    "message": f"Se ha registrado a {emp.nombre} {emp.apellidos}",
+                    "title": title,
+                    "message": message,
                     "time": emp.fecha_alta.strftime("%I:%M %p"),
                     "details": None
                 })

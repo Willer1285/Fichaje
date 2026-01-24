@@ -1,6 +1,7 @@
 import os
 import uuid
 from pathlib import Path
+from app.utils.paths import get_uploads_path
 
 try:
     import cv2
@@ -10,9 +11,8 @@ except ImportError:
     OPENCV_AVAILABLE = False
     print("Advertencia: OpenCV no está instalado. El procesamiento de imágenes (recorte de rostro) estará deshabilitado.")
 
-# Directorio de subida
-UPLOAD_DIR = Path("assets/uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+# Directorio de subida - usar la ruta centralizada de ProgramData
+UPLOAD_DIR = Path(get_uploads_path())
 
 def process_employee_photo(file_bytes: bytes) -> str:
     """

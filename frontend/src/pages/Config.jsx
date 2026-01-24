@@ -60,6 +60,7 @@ function TabButton({ active, onClick, icon, label }) {
 // --- Componentes de Secciones ---
 
 function CompanySettings() {
+  const [logoTimestamp, setLogoTimestamp] = useState(Date.now());
   const [config, setConfig] = useState({
     nombre_empresa: '',
     nombre_aplicacion: 'Fichaje',
@@ -124,6 +125,7 @@ function CompanySettings() {
       console.log('Respuesta del servidor:', response.data);
       setToast({ message: 'Configuración guardada correctamente', type: 'success' });
       setLogoFile(null);
+      setLogoTimestamp(Date.now()); // Forzar recarga de logo
 
       // Recargar configuración y verificar
       await fetchConfig();
@@ -163,7 +165,7 @@ function CompanySettings() {
                 {logoFile ? (
                   <div className="text-sm text-blue-600 font-medium truncate">{logoFile.name}</div>
                 ) : config.logo_path ? (
-                  <img src={`${API_URL.replace('/api', '')}${config.logo_path}`} alt="Logo" className="h-16 mx-auto object-contain" />
+                  <img src={`${API_URL.replace('/api', '')}${config.logo_path}?t=${logoTimestamp}`} alt="Logo" className="h-16 mx-auto object-contain" />
                 ) : (
                   <div className="flex flex-col items-center text-slate-400">
                     <Upload size={24} className="mb-2" />

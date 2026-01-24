@@ -133,9 +133,9 @@ export function EmployeeFormModal({ isOpen, onClose, type, employee, onSuccess, 
 
         setFormData(newFormData);
 
-        // Actualizar photoPreview
+        // Actualizar photoPreview con cache busting
         if (employee?.foto_path) {
-            setPhotoPreview(`${API_URL.replace('/api', '')}${employee.foto_path}`);
+            setPhotoPreview(`${API_URL.replace('/api', '')}${employee.foto_path}?t=${Date.now()}`);
         } else {
             setPhotoPreview(null);
         }
@@ -479,7 +479,7 @@ export function EmployeeCardModal({ isOpen, onClose, employee, catalogs = { depa
                 <div className="w-1/3 bg-slate-50 p-8 flex flex-col items-center text-center border-r border-slate-100">
                     <div className="w-48 h-48 rounded-2xl bg-white shadow-lg overflow-hidden mb-6 border-4 border-white">
                         {employee.foto_path ? (
-                            <img src={`${API_URL.replace('/api', '')}${employee.foto_path}`} className="w-full h-full object-cover" alt="" />
+                            <img src={`${API_URL.replace('/api', '')}${employee.foto_path}?t=${Date.now()}`} className="w-full h-full object-cover" alt="" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-300">
                                 <User size={64} />

@@ -152,11 +152,9 @@ async def create_employee(
     if foto:
         try:
             contents = await foto.read()
-            if len(contents) > 2 * 1024 * 1024: # 2MB limit
-                # raise HTTPException(status_code=400, detail="La imagen no debe pesar más de 2MB")
-                # Intentamos procesarla igual, el resize la reducirá
-                pass
-                
+            if len(contents) > 1 * 1024 * 1024:  # 1MB limit
+                raise HTTPException(status_code=400, detail="La imagen no debe pesar más de 1MB")
+
             foto_path = process_employee_photo(contents)
         except Exception as e:
             print(f"Error subiendo foto: {e}")
@@ -239,6 +237,12 @@ async def update_employee(
     if not existing_emp:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
 
+    # Validar que el DNI no esté en uso por OTRO empleado
+    if dni != existing_emp.dni:
+        empleado_con_dni = db.obtener_empleado_por_dni(dni)
+        if empleado_con_dni and empleado_con_dni.id != employee_id:
+            raise HTTPException(status_code=400, detail="El DNI ya está registrado por otro empleado")
+
     # Eliminar foto si se solicita
     if eliminar_foto:
         existing_emp.foto_path = ""
@@ -247,7 +251,12 @@ async def update_employee(
     if foto:
         try:
             contents = await foto.read()
+            if len(contents) > 1 * 1024 * 1024:  # 1MB limit
+                raise HTTPException(status_code=400, detail="La imagen no debe pesar más de 1MB")
+
             existing_emp.foto_path = process_employee_photo(contents)
+        except HTTPException:
+            raise
         except Exception as e:
             print(f"Error actualizando foto: {e}")
 
