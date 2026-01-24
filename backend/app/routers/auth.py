@@ -5,6 +5,7 @@ from app.utils.security import verify_password
 from app.utils.qr_generator import qr_generator
 from app.database.models import Fichaje
 from datetime import datetime
+import logging
 
 router = APIRouter(
     prefix="/api/auth",
@@ -72,51 +73,51 @@ def login_employee(data: EmployeeLoginRequest, db = Depends(get_db)):
 @router.post("/login")
 def login(data: LoginRequest, db = Depends(get_db)):
     """Inicia sesión y devuelve el usuario si es correcto"""
-    print(f"\n🔐 [LOGIN] Intento de inicio de sesión:")
-    print(f"   DNI recibido: '{data.dni}'")
-    print(f"   DNI normalizado: '{data.dni.upper()}'")
+    logging.info("\n🔐 [LOGIN] Intento de inicio de sesión:")
+    logging.info(f"   DNI recibido: '{data.dni}'")
+    logging.info(f"   DNI normalizado: '{data.dni.upper()}'")
 
     empleado = db.obtener_empleado_por_dni(data.dni.upper())
 
     if not empleado:
-        print(f"❌ [LOGIN] No se encontró empleado con DNI: {data.dni.upper()}")
-        print(f"   Verificando empleados existentes en la base de datos...")
+        logging.info(f"❌ [LOGIN] No se encontró empleado con DNI: {data.dni.upper()}")
+        logging.info("   Verificando empleados existentes en la base de datos...")
         # Listar todos los empleados para diagnóstico
         try:
             todos = db.listar_empleados(incluir_inactivos=True)
-            print(f"   Total empleados en BD: {len(todos)}")
+            logging.info(f"   Total empleados en BD: {len(todos)}")
             for emp in todos[:5]:  # Mostrar primeros 5
-                print(f"     - DNI: {emp.dni}, Nombre: {emp.nombre} {emp.apellidos}, Activo: {emp.activo}")
+                logging.info(f"     - DNI: {emp.dni}, Nombre: {emp.nombre} {emp.apellidos}, Activo: {emp.activo}")
         except Exception as e:
-            print(f"   Error al listar empleados: {e}")
+            logging.info(f"   Error al listar empleados: {e}")
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
-    print(f"✓ [LOGIN] Empleado encontrado:")
-    print(f"   ID: {empleado.id}")
-    print(f"   Nombre: {empleado.nombre} {empleado.apellidos}")
-    print(f"   DNI: {empleado.dni}")
-    print(f"   Activo: {empleado.activo}")
-    print(f"   Es admin: {empleado.es_admin}")
-    print(f"   Es superadmin: {empleado.es_superadmin}")
-    print(f"   Password hash: {empleado.password_hash[:20]}... (longitud: {len(empleado.password_hash)})")
+    logging.info("✓ [LOGIN] Empleado encontrado:")
+    logging.info(f"   ID: {empleado.id}")
+    logging.info(f"   Nombre: {empleado.nombre} {empleado.apellidos}")
+    logging.info(f"   DNI: {empleado.dni}")
+    logging.info(f"   Activo: {empleado.activo}")
+    logging.info(f"   Es admin: {empleado.es_admin}")
+    logging.info(f"   Es superadmin: {empleado.es_superadmin}")
+    logging.info(f"   Password hash: {empleado.password_hash[:20]}... (longitud: {len(empleado.password_hash)})")
 
     if not verify_password(data.password, empleado.password_hash):
-        print(f"❌ [LOGIN] Contraseña incorrecta para DNI: {data.dni.upper()}")
-        print(f"   Contraseña recibida: '{data.password}' (longitud: {len(data.password)})")
+        logging.info(f"❌ [LOGIN] Contraseña incorrecta para DNI: {data.dni.upper()}")
+        logging.info(f"   Contraseña recibida: '{data.password}' (longitud: {len(data.password)})")
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
-    print(f"✓ [LOGIN] Contraseña verificada correctamente")
+    logging.info("✓ [LOGIN] Contraseña verificada correctamente")
 
     if not empleado.activo:
-        print(f"❌ [LOGIN] Usuario inactivo: {empleado.dni}")
+        logging.info(f"❌ [LOGIN] Usuario inactivo: {empleado.dni}")
         raise HTTPException(status_code=403, detail="Usuario inactivo")
 
     # Verificar si es admin o superadmin para acceso al dashboard
     if not (empleado.es_admin or empleado.es_superadmin):
-        print(f"❌ [LOGIN] Usuario sin permisos de administrador: {empleado.dni}")
+        logging.info(f"❌ [LOGIN] Usuario sin permisos de administrador: {empleado.dni}")
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requieren permisos de administrador")
 
-    print(f"✅ [LOGIN] Inicio de sesión exitoso para: {empleado.nombre} {empleado.apellidos}")
+    logging.info(f"✅ [LOGIN] Inicio de sesión exitoso para: {empleado.nombre} {empleado.apellidos}")
     return {
         "id": empleado.id,
         "nombre": empleado.nombre,

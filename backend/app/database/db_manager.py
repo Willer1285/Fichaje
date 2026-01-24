@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Tuple
 from contextlib import contextmanager
 import os
+import logging
 
 from app.database.models import Employee, Fichaje, HistorialModificacion, Configuracion, Turno, SolicitudVacacion, SaldoVacaciones, Ausencia, AusenciaPendiente, DispositivoEmpleado, QRActivo, Departamento, Ubicacion
 from app.utils.security import hash_password
@@ -18,15 +19,15 @@ class DatabaseManager:
 
     def __init__(self, db_path: str = "fichaje.db"):
         self.db_path = db_path
-        print(f"\n💾 [DATABASE] Inicializando base de datos:")
-        print(f"   Ruta: {os.path.abspath(self.db_path)}")
-        print(f"   Existe: {os.path.exists(self.db_path)}")
+        logging.info("\n💾 [DATABASE] Inicializando base de datos:")
+        logging.info(f"   Ruta: {os.path.abspath(self.db_path)}")
+        logging.info(f"   Existe: {os.path.exists(self.db_path)}")
 
         # Verificar permisos de escritura en el directorio
         db_dir = os.path.dirname(os.path.abspath(self.db_path)) or '.'
-        print(f"   Directorio: {db_dir}")
-        print(f"   Directorio existe: {os.path.exists(db_dir)}")
-        print(f"   Permisos escritura: {os.access(db_dir, os.W_OK)}")
+        logging.info(f"   Directorio: {db_dir}")
+        logging.info(f"   Directorio existe: {os.path.exists(db_dir)}")
+        logging.info(f"   Permisos escritura: {os.access(db_dir, os.W_OK)}")
 
         self._init_database()
 
@@ -476,15 +477,15 @@ class DatabaseManager:
             from app.utils.security import hash_password
             admin_pass_hash = hash_password("admin123")
 
-            print(f"\n🔑 [DB INIT] Verificando usuario administrador...")
-            print(f"   DNI del admin: {admin_dni}")
-            print(f"   Password hash generado: {admin_pass_hash[:20]}... (longitud: {len(admin_pass_hash)})")
+            logging.info("\n🔑 [DB INIT] Verificando usuario administrador...")
+            logging.info(f"   DNI del admin: {admin_dni}")
+            logging.info(f"   Password hash generado: {admin_pass_hash[:20]}... (longitud: {len(admin_pass_hash)})")
 
             cursor.execute("SELECT COUNT(*) FROM empleados WHERE dni = ?", (admin_dni,))
             admin_existe = cursor.fetchone()[0]
 
             if admin_existe == 0:
-                print("   ⚙️  Creando usuario administrador por defecto...")
+                logging.info("   ⚙️  Creando usuario administrador por defecto...")
                 cursor.execute("""
                     INSERT INTO empleados (
                         nombre, apellidos, dni, telefono, numero_empleado,
@@ -495,30 +496,30 @@ class DatabaseManager:
                         'completa', 1, 1, ?, 1, ?
                     )
                 """, (admin_dni, admin_pass_hash, datetime.now()))
-                print(f"   ✅ Usuario administrador creado exitosamente")
+                logging.info("   ✅ Usuario administrador creado exitosamente")
             else:
                 # Asegurar que el admin tenga la contraseña correcta y permisos
                 # Esto garantiza acceso incluso si la BD ya existía con otra clave
-                print(f"   ⚙️  Administrador ya existe. Actualizando credenciales...")
+                logging.info("   ⚙️  Administrador ya existe. Actualizando credenciales...")
                 cursor.execute("""
                     UPDATE empleados
                     SET password_hash = ?, es_superadmin = 1, es_admin = 1, activo = 1
                     WHERE dni = ?
                 """, (admin_pass_hash, admin_dni))
-                print(f"   ✅ Credenciales del administrador actualizadas")
+                logging.info("   ✅ Credenciales del administrador actualizadas")
 
             # Verificar que el administrador quedó correctamente configurado
             cursor.execute("SELECT dni, nombre, apellidos, es_admin, es_superadmin, activo FROM empleados WHERE dni = ?", (admin_dni,))
             admin_row = cursor.fetchone()
             if admin_row:
-                print(f"   📋 Verificación final del admin:")
-                print(f"      DNI: {admin_row[0]}")
-                print(f"      Nombre: {admin_row[1]} {admin_row[2]}")
-                print(f"      Es Admin: {admin_row[3]}")
-                print(f"      Es Superadmin: {admin_row[4]}")
-                print(f"      Activo: {admin_row[5]}")
+                logging.info("   📋 Verificación final del admin:")
+                logging.info(f"      DNI: {admin_row[0]}")
+                logging.info(f"      Nombre: {admin_row[1]} {admin_row[2]}")
+                logging.info(f"      Es Admin: {admin_row[3]}")
+                logging.info(f"      Es Superadmin: {admin_row[4]}")
+                logging.info(f"      Activo: {admin_row[5]}")
             else:
-                print(f"   ⚠️  ADVERTENCIA: No se pudo verificar el administrador")
+                logging.info("   ⚠️  ADVERTENCIA: No se pudo verificar el administrador")
 
             conn.commit()
 
@@ -562,23 +563,23 @@ class DatabaseManager:
 
     def obtener_empleado_por_dni(self, dni: str) -> Optional[Employee]:
         """Obtiene un empleado por DNI"""
-        print(f"\n🔍 [DB] Buscando empleado por DNI: '{dni}'")
+        logging.info(f"\n🔍 [DB] Buscando empleado por DNI: '{dni}'")
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM empleados WHERE dni = ? AND activo = 1", (dni,))
             row = cursor.fetchone()
             if row:
-                print(f"   ✓ Empleado encontrado en BD")
+                logging.info("   ✓ Empleado encontrado en BD")
                 return self._row_to_employee(row)
             else:
-                print(f"   ✗ No se encontró empleado con DNI '{dni}' (activo)")
+                logging.info(f"   ✗ No se encontró empleado con DNI '{dni}' (activo)")
                 # Verificar si existe pero está inactivo
                 cursor.execute("SELECT COUNT(*) FROM empleados WHERE dni = ?", (dni,))
                 existe = cursor.fetchone()[0]
                 if existe > 0:
-                    print(f"   ⚠️  El empleado existe pero está INACTIVO")
+                    logging.info("   ⚠️  El empleado existe pero está INACTIVO")
                 else:
-                    print(f"   ⚠️  El empleado NO EXISTE en la base de datos")
+                    logging.info("   ⚠️  El empleado NO EXISTE en la base de datos")
                 return None
 
     def listar_empleados(self, incluir_inactivos: bool = False) -> List[Employee]:
@@ -716,11 +717,11 @@ class DatabaseManager:
     def obtener_fichajes_periodo(self, empleado_id: int, fecha_inicio: datetime,
                                   fecha_fin: datetime) -> List[Fichaje]:
         """Obtiene los fichajes de un periodo"""
-        print(f"📊 [DB] Consultando fichajes individual:")
-        print(f"   Empleado ID: {empleado_id}")
-        print(f"   Inicio: {fecha_inicio}")
-        print(f"   Fin: {fecha_fin}")
-        
+        logging.info("📊 [DB] Consultando fichajes individual:")
+        logging.info(f"   Empleado ID: {empleado_id}")
+        logging.info(f"   Inicio: {fecha_inicio}")
+        logging.info(f"   Fin: {fecha_fin}")
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -729,22 +730,22 @@ class DatabaseManager:
                 ORDER BY fecha DESC
             """, (empleado_id, fecha_inicio, fecha_fin))
             rows = cursor.fetchall()
-            print(f"   ✅ [DB] Fichajes encontrados: {len(rows)}")
+            logging.info(f"   ✅ [DB] Fichajes encontrados: {len(rows)}")
             return [self._row_to_fichaje(row) for row in rows]
 
     def obtener_todos_fichajes_periodo(self, fecha_inicio: datetime,
                                         fecha_fin: datetime) -> List[Tuple[Fichaje, Employee]]:
         """Obtiene todos los fichajes de un periodo con datos del empleado"""
-        print(f"📊 [DB] Consultando TODOS los fichajes:")
-        print(f"   Inicio: {fecha_inicio}")
-        print(f"   Fin: {fecha_fin}")
-        
+        logging.info("📊 [DB] Consultando TODOS los fichajes:")
+        logging.info(f"   Inicio: {fecha_inicio}")
+        logging.info(f"   Fin: {fecha_fin}")
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            
+
             # Asegurar conversión a string si es necesario para SQLite (a veces ayuda con formatos mixtos)
             # Pero probemos primero con los objetos directos y loggeando el count
-            
+
             cursor.execute("""
                 SELECT f.*, e.nombre, e.apellidos, e.dni, e.numero_empleado, e.tipo_jornada, e.turno_id, e.departamento_id
                 FROM fichajes f
@@ -754,11 +755,11 @@ class DatabaseManager:
             """, (fecha_inicio, fecha_fin))
 
             rows = cursor.fetchall()
-            print(f"   ✅ [DB] Registros encontrados (JOIN): {len(rows)}")
+            logging.info(f"   ✅ [DB] Registros encontrados (JOIN): {len(rows)}")
 
             if len(rows) > 0:
-                 print(f"      Primer registro fecha: {rows[0]['fecha']}")
-                 print(f"      Primer registro empleado: {rows[0]['nombre']} {rows[0]['apellidos']}")
+                 logging.info(f"      Primer registro fecha: {rows[0]['fecha']}")
+                 logging.info(f"      Primer registro empleado: {rows[0]['nombre']} {rows[0]['apellidos']}")
 
             resultados = []
             for row in rows:
