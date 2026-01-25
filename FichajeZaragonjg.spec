@@ -5,7 +5,7 @@ a = Analysis(
     ['desktop_app.py'],
     pathex=['C:\\Users\\wille\\Downloads\\Fichaje\\backend'],
     binaries=[],
-    datas=[('frontend/dist', 'frontend/dist'), ('assets', 'assets')],
+    datas=[('frontend/dist', 'frontend/dist')],
     hiddenimports=['uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto', 'uvicorn.protocols', 'uvicorn.protocols.http', 'uvicorn.protocols.http.auto', 'uvicorn.protocols.websockets', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan', 'uvicorn.lifespan.on', 'email.mime.multipart', 'email.mime.text', 'email.mime.base', 'email.mime.image', 'email.mime.audio', 'passlib.handlers.bcrypt'],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\wille\\Downloads\\Fichaje\\assets\\icon.png'],
+    icon=['C:\\Users\\wille\\Downloads\\Fichaje\\assets\\fingerprint.ico'],
 )
