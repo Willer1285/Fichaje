@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from app.dependencies import get_db
 from app.database.models import Configuracion
+from app.utils import paths
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -12,20 +13,26 @@ router = APIRouter(
     tags=["config"],
 )
 
-UPLOAD_DIR = Path("assets/uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+# Usar la ruta centralizada de ProgramData en lugar de una ruta relativa
+# Esto evita que se cree una carpeta assets duplicada junto al ejecutable
+def get_upload_dir():
+    """Retorna la ruta de uploads usando la función centralizada de paths"""
+    return Path(paths.get_uploads_path())
 
 def save_upload(file: UploadFile) -> str:
     try:
+        # Obtener el directorio de uploads (ahora desde ProgramData)
+        upload_dir = get_upload_dir()
+
         # Generar nombre único manteniendo extensión
         ext = os.path.splitext(file.filename)[1]
         filename = f"{uuid.uuid4()}{ext}"
-        file_path = UPLOAD_DIR / filename
-        
+        file_path = upload_dir / filename
+
         with open(file_path, "wb") as buffer:
             import shutil
             shutil.copyfileobj(file.file, buffer)
-            
+
         return f"/assets/uploads/{filename}"
     except Exception as e:
         print(f"Error guardando archivo: {e}")

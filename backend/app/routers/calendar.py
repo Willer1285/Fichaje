@@ -98,11 +98,16 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                         'permiso_sin_sueldo': 'Permiso Sin Sueldo'
                     }.get(v.tipo, 'Vacaciones')
 
+                    # Formatear fechas como YYYY-MM-DD para FullCalendar
+                    fecha_inicio_str = v.fecha_inicio.strftime("%Y-%m-%d") if hasattr(v.fecha_inicio, 'strftime') else str(v.fecha_inicio).split('T')[0]
+                    fecha_fin_plus_one = v.fecha_fin + timedelta(days=1)
+                    fecha_fin_str = fecha_fin_plus_one.strftime("%Y-%m-%d") if hasattr(fecha_fin_plus_one, 'strftime') else str(fecha_fin_plus_one).split('T')[0]
+
                     events.append({
                         "id": f"vac_{v.id}",
                         "title": f"{tipo_label} ({estado_label}): {emp.nombre}",
-                        "start": v.fecha_inicio.isoformat(),
-                        "end": (v.fecha_fin + timedelta(days=1)).isoformat(), # FullCalendar exclusive end
+                        "start": fecha_inicio_str,
+                        "end": fecha_fin_str, # FullCalendar exclusive end
                         "allDay": True,
                         "backgroundColor": color,
                         "borderColor": color,
@@ -160,11 +165,16 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                     }
                     estado_label = estado_label_map.get(a.estado, a.estado.capitalize())
 
+                    # Formatear fechas como YYYY-MM-DD para FullCalendar
+                    fecha_inicio_str = a.fecha_inicio.strftime("%Y-%m-%d") if hasattr(a.fecha_inicio, 'strftime') else str(a.fecha_inicio).split('T')[0]
+                    fecha_fin_plus_one = a.fecha_fin + timedelta(days=1)
+                    fecha_fin_str = fecha_fin_plus_one.strftime("%Y-%m-%d") if hasattr(fecha_fin_plus_one, 'strftime') else str(fecha_fin_plus_one).split('T')[0]
+
                     events.append({
                         "id": f"aus_{a.id}",
                         "title": f"{tipo_label} ({estado_label}): {emp.nombre}",
-                        "start": a.fecha_inicio.isoformat(),
-                        "end": (a.fecha_fin + timedelta(days=1)).isoformat(),
+                        "start": fecha_inicio_str,
+                        "end": fecha_fin_str,
                         "allDay": True,
                         "backgroundColor": color,
                         "borderColor": color,
@@ -189,4 +199,4 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
         print(f"❌ Error fetching calendar events: {e}")
         import traceback
         traceback.print_exc()
-        return []
+        raise HTTPException(status_code=500, detail=f"Error al obtener eventos del calendario: {str(e)}")

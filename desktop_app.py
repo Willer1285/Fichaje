@@ -98,6 +98,17 @@ def start_server():
     uvicorn.run(app, host="127.0.0.1", port=45678, log_level="info")
 
 if __name__ == '__main__':
+    # Configurar UTF-8 para stdout/stderr en Windows para evitar errores de encoding
+    if os.name == 'nt':  # Windows
+        try:
+            import sys
+            import io
+            # Reconfigurar stdout y stderr con UTF-8
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        except Exception as e:
+            print(f"No se pudo configurar UTF-8 encoding: {e}")
+
     # Configurar logging al inicio
     try:
         log_file = setup_logging(log_to_file=True)
