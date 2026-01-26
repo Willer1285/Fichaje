@@ -195,6 +195,8 @@ def start_server():
             port=45678,
             log_level="warning",  # Reducir logging de uvicorn para evitar problemas con stdio
             access_log=False,     # El middleware de FastAPI ya loguea requests
+            log_config=None,      # Desactivar config de logging de uvicorn (su DefaultFormatter
+                                  # llama sys.stderr.isatty() que falla con stdio cerrado de PyInstaller)
         )
         server = uvicorn.Server(config)
 
