@@ -14,28 +14,42 @@ import traceback
 # Esto causa que uvicorn y otros modulos fallen silenciosamente al intentar
 # escribir en stdout/stderr.
 # =============================================================================
+def _is_stream_writable(stream):
+    """Verifica si un stream es valido y escribible."""
+    if stream is None:
+        return False
+    try:
+        if hasattr(stream, 'closed') and stream.closed:
+            return False
+        stream.write('')
+        stream.flush()
+        return True
+    except (ValueError, OSError, AttributeError, TypeError):
+        return False
+
 def _ensure_safe_stdio():
     """
     Asegura que sys.stdout y sys.stderr sean objetos validos.
-    En PyInstaller windowed (console=False), estos son None, lo que causa
-    que uvicorn.run() falle silenciosamente al configurar logging.
+    En PyInstaller windowed (console=False), estos pueden ser None
+    o file handles cerrados, lo que causa que uvicorn y logging
+    fallen con 'I/O operation on closed file'.
     """
-    if sys.stdout is None:
+    if not _is_stream_writable(sys.stdout):
         sys.stdout = open(os.devnull, 'w', encoding='utf-8')
-    if sys.stderr is None:
+    if not _is_stream_writable(sys.stderr):
         sys.stderr = open(os.devnull, 'w', encoding='utf-8')
 
     # En Windows, reconfigurar con UTF-8 si tienen buffer
     if os.name == 'nt':
         try:
-            if hasattr(sys.stdout, 'buffer'):
+            if hasattr(sys.stdout, 'buffer') and not sys.stdout.closed:
                 sys.stdout = io.TextIOWrapper(
                     sys.stdout.buffer, encoding='utf-8', errors='replace'
                 )
         except (ValueError, OSError, AttributeError):
             pass
         try:
-            if hasattr(sys.stderr, 'buffer'):
+            if hasattr(sys.stderr, 'buffer') and not sys.stderr.closed:
                 sys.stderr = io.TextIOWrapper(
                     sys.stderr.buffer, encoding='utf-8', errors='replace'
                 )

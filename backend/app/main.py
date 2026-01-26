@@ -14,10 +14,8 @@ if getattr(sys, 'frozen', False) or os.environ.get('DESKTOP_MODE'):
     try:
         from app.utils.logger import setup_logging
         setup_logging(log_to_file=True)
-        logging.info("📝 Sistema de logging inicializado para modo desktop")
-    except Exception as e:
+    except (ValueError, OSError, Exception):
         # No imprimir porque stdout puede estar cerrado en modo ejecutable
-        # El logging se configurará de todas formas con valores por defecto
         pass
 
 app = FastAPI(title="TimeTrack Pro API", version="2.0.0")
@@ -47,11 +45,18 @@ uploads_path = paths.get_uploads_path()
 # Montamos la carpeta padre 'assets' para que /assets/uploads/... funcione
 # IMPORTANTE: Usar ruta absoluta para evitar que se cree en directorio del .exe
 assets_root = os.path.abspath(os.path.dirname(uploads_path))
-logging.info(f"📁 Montando archivos estáticos desde: {assets_root}")
+def _safe_log(level, msg):
+    """Log seguro que no falla si stdout/stderr estan cerrados."""
+    try:
+        getattr(logging, level)(msg)
+    except (ValueError, OSError):
+        pass
+
+_safe_log("info", f"Montando archivos estaticos desde: {assets_root}")
 
 # Verificar que el directorio existe antes de montar
 if not os.path.exists(assets_root):
-    logging.warning(f"⚠️ Creando directorio de assets: {assets_root}")
+    _safe_log("warning", f"Creando directorio de assets: {assets_root}")
     os.makedirs(assets_root, exist_ok=True)
 
 app.mount("/assets", StaticFiles(directory=assets_root), name="assets")
