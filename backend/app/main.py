@@ -16,7 +16,9 @@ if getattr(sys, 'frozen', False) or os.environ.get('DESKTOP_MODE'):
         setup_logging(log_to_file=True)
         logging.info("📝 Sistema de logging inicializado para modo desktop")
     except Exception as e:
-        print(f"⚠️ Error configurando logging en main.py: {e}")
+        # No imprimir porque stdout puede estar cerrado en modo ejecutable
+        # El logging se configurará de todas formas con valores por defecto
+        pass
 
 app = FastAPI(title="TimeTrack Pro API", version="2.0.0")
 

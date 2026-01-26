@@ -22,6 +22,17 @@ from app.main import app
 from app.utils import paths
 from app.utils.logger import setup_logging
 
+def safe_print(msg):
+    """
+    Función segura para imprimir mensajes.
+    En modo ejecutable sin consola, stdout puede estar cerrado.
+    """
+    try:
+        print(msg)
+    except (ValueError, OSError, AttributeError):
+        # Si stdout está cerrado, usar logging como fallback
+        logging.info(msg)
+
 class Api:
     def __init__(self):
         self.window = None
@@ -107,7 +118,8 @@ if __name__ == '__main__':
             sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
             sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
         except Exception as e:
-            print(f"No se pudo configurar UTF-8 encoding: {e}")
+            # No usar print aquí porque puede que stdout no esté disponible
+            pass
 
     # Configurar logging al inicio
     try:
@@ -119,17 +131,17 @@ if __name__ == '__main__':
         logging.info(f"🐍 Python version: {sys.version}")
         logging.info("="*80)
     except Exception as e:
-        print(f"⚠️ Error configurando logging: {e}")
-        print("Continuando sin logging a archivo...")
+        safe_print(f"⚠️ Error configurando logging: {e}")
+        safe_print("Continuando sin logging a archivo...")
 
     # Verificar si el frontend está compilado
     dist_path = paths.get_frontend_dist_path()
     if not os.path.exists(dist_path):
         msg = f"ADVERTENCIA: No se encontró la carpeta '{dist_path}'."
         logging.warning(msg)
-        print(msg)
-        print("Por favor ejecuta 'cd frontend && npm run build' antes de iniciar la aplicación.")
-        print("La aplicación intentará ejecutarse, pero el frontend no cargará correctamente.")
+        safe_print(msg)
+        safe_print("Por favor ejecuta 'cd frontend && npm run build' antes de iniciar la aplicación.")
+        safe_print("La aplicación intentará ejecutarse, pero el frontend no cargará correctamente.")
 
     # Iniciar el servidor backend en un hilo separado
     # daemon=True asegura que el hilo se cierre cuando el programa principal termine
@@ -156,7 +168,7 @@ if __name__ == '__main__':
     if not server_ready:
         msg = "⚠️ Advertencia: El servidor backend tarda en responder..."
         logging.warning(msg)
-        print(msg)
+        safe_print(msg)
 
     # Crear instancia de la API
     api = Api()
@@ -185,7 +197,7 @@ if __name__ == '__main__':
 
     # Iniciar el loop de la interfaz gráfica
     logging.info("🎨 Iniciando aplicación de escritorio...")
-    print("Iniciando aplicación de escritorio...")
+    safe_print("Iniciando aplicación de escritorio...")
     webview.start()
 
     logging.info("👋 Aplicación cerrada por el usuario")

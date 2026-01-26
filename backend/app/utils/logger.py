@@ -90,7 +90,11 @@ class LogPrint:
         """Permite usar LogPrint() como función print()"""
         message = ' '.join(str(arg) for arg in args)
         self.logger.info(message)
-        print(message, **kwargs)
+        try:
+            print(message, **kwargs)
+        except (ValueError, OSError, AttributeError):
+            # stdout puede estar cerrado en modo ejecutable sin consola
+            pass
 
 # Instancia global para usar como print
 log_print = LogPrint()
