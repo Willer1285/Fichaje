@@ -45,12 +45,18 @@ def setup_logging(log_to_file=True, log_dir=None):
     # Limpiar handlers existentes
     root_logger.handlers = []
 
-    # Handler para consola
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter(log_format, date_format)
-    console_handler.setFormatter(console_formatter)
-    root_logger.addHandler(console_handler)
+    # Handler para consola (solo si stdout esta disponible)
+    # En PyInstaller con console=False, sys.stdout puede ser None
+    if sys.stdout is not None:
+        try:
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setLevel(logging.INFO)
+            console_formatter = logging.Formatter(log_format, date_format)
+            console_handler.setFormatter(console_formatter)
+            root_logger.addHandler(console_handler)
+        except (ValueError, OSError, AttributeError):
+            # Si stdout esta cerrado o no es valido, omitir handler de consola
+            pass
 
     # Handler para archivo (si está habilitado)
     if log_to_file:

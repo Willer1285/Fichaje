@@ -58,22 +58,38 @@ def main():
 
     # Imports ocultos necesarios para Uvicorn y FastAPI
     hidden_imports = [
+        # Uvicorn core
         "uvicorn.logging",
         "uvicorn.loops",
         "uvicorn.loops.auto",
         "uvicorn.protocols",
         "uvicorn.protocols.http",
         "uvicorn.protocols.http.auto",
+        "uvicorn.protocols.http.h11_impl",
         "uvicorn.protocols.websockets",
         "uvicorn.protocols.websockets.auto",
         "uvicorn.lifespan",
         "uvicorn.lifespan.on",
+        "uvicorn.lifespan.off",
+        # HTTP
+        "h11",
+        # Email (requerido por Pydantic/FastAPI)
         "email.mime.multipart",
         "email.mime.text",
         "email.mime.base",
         "email.mime.image",
         "email.mime.audio",
-        "passlib.handlers.bcrypt"
+        "email._header_value_parser",
+        # Seguridad
+        "passlib.handlers.bcrypt",
+        "bcrypt",
+        # Asyncio (requerido por uvicorn en threads)
+        "asyncio",
+        "asyncio.events",
+        "asyncio.base_events",
+        # Multipart (requerido por FastAPI para form uploads)
+        "multipart",
+        "multipart.multipart",
     ]
     
     hidden_imports_args = " ".join([f"--hidden-import={mod}" for mod in hidden_imports])

@@ -407,8 +407,6 @@ def get_today_attendance(db = Depends(get_db)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/stats")
 def get_dashboard_stats(period: str = "day", db = Depends(get_db)):

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_db
-from datetime import datetime
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -111,7 +111,7 @@ def get_dashboard_alerts(db = Depends(get_db)):
                     try:
                         h, m = map(int, turno.hora_inicio.split(":"))
                         hora_inicio_esperada = fichaje.hora_entrada.replace(hour=h, minute=m, second=0)
-                        limite = hora_inicio_esperada + datetime.timedelta(minutes=config.tiempo_tolerancia_minutos)
+                        limite = hora_inicio_esperada + timedelta(minutes=config.tiempo_tolerancia_minutos)
 
                         if fichaje.hora_entrada > limite:
                             es_tarde = True
@@ -142,7 +142,7 @@ def get_dashboard_alerts(db = Depends(get_db)):
                 try:
                     h, m = map(int, turno.hora_inicio.split(":"))
                     hora_inicio_esperada = fichaje.hora_entrada.replace(hour=h, minute=m, second=0)
-                    limite = hora_inicio_esperada + datetime.timedelta(minutes=config.tiempo_tolerancia_minutos)
+                    limite = hora_inicio_esperada + timedelta(minutes=config.tiempo_tolerancia_minutos)
 
                     if fichaje.hora_entrada > limite:
                         diff = fichaje.hora_entrada - hora_inicio_esperada
@@ -403,7 +403,7 @@ def get_alert_details(alert_id: str, db = Depends(get_db)):
                 try:
                     h, m = map(int, turno.hora_inicio.split(":"))
                     hora_inicio_esperada = fichaje.hora_entrada.replace(hour=h, minute=m, second=0)
-                    limite = hora_inicio_esperada + datetime.timedelta(minutes=config.tiempo_tolerancia_minutos)
+                    limite = hora_inicio_esperada + timedelta(minutes=config.tiempo_tolerancia_minutos)
                     if fichaje.hora_entrada > limite:
                         diff = fichaje.hora_entrada - hora_inicio_esperada
                         minutos_tarde = int(diff.total_seconds() / 60)
