@@ -198,6 +198,28 @@ if __name__ == '__main__':
     # Iniciar el loop de la interfaz gráfica
     logging.info("🎨 Iniciando aplicación de escritorio...")
     safe_print("Iniciando aplicación de escritorio...")
-    webview.start()
+
+    # Configurar storage_path para evitar problemas de permisos con EdgeChromium
+    # y establecer debug=False para evitar errores de AccessibilityObject en producción
+    try:
+        # Intentar obtener la carpeta AppData local del usuario
+        if os.name == 'nt':
+            storage_path = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'FichajeZaragonjg')
+        else:
+            storage_path = os.path.join(os.path.expanduser('~'), '.fichaje_zaragonjg')
+
+        # Crear la carpeta si no existe
+        os.makedirs(storage_path, exist_ok=True)
+        logging.info(f"📂 Storage path configurado: {storage_path}")
+
+        # Iniciar con configuración mejorada
+        # - gui='edgechromium': Fuerza el uso de EdgeChromium en lugar de WinForms
+        # - storage_path: Evita errores de permisos (E_ACCESSDENIED)
+        # - debug=False: Desactiva mensajes de debug en producción
+        webview.start(gui='edgechromium', storage_path=storage_path, debug=False)
+    except Exception as e:
+        logging.error(f"⚠️ Error al configurar storage_path, iniciando sin configuración: {e}")
+        # Fallback: intentar iniciar sin storage_path
+        webview.start(gui='edgechromium', debug=False)
 
     logging.info("👋 Aplicación cerrada por el usuario")
