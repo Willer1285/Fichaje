@@ -7,6 +7,7 @@ from typing import Optional
 import os
 import uuid
 from pathlib import Path
+import logging
 
 router = APIRouter(
     prefix="/api/config",
@@ -35,7 +36,7 @@ def save_upload(file: UploadFile) -> str:
 
         return f"/assets/uploads/{filename}"
     except Exception as e:
-        print(f"Error guardando archivo: {e}")
+        logging.error(f"Error guardando archivo: {e}", exc_info=True)
         return ""
 
 @router.get("")

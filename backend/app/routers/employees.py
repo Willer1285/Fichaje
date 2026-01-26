@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime
 import json
+import logging
 
 router = APIRouter(
     prefix="/api/employees",
@@ -87,11 +88,11 @@ def read_employee(employee_id: int, db = Depends(get_db)):
     if not e:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
 
-    print(f"📦 [GET /employees/{employee_id}] Empleado obtenido:")
-    print(f"   primer_nombre: {e.primer_nombre}")
-    print(f"   segundo_nombre: {e.segundo_nombre}")
-    print(f"   primer_apellido: {e.primer_apellido}")
-    print(f"   segundo_apellido: {e.segundo_apellido}")
+    logging.info(f"📦 [GET /employees/{employee_id}] Empleado obtenido:")
+    logging.info(f"   primer_nombre: {e.primer_nombre}")
+    logging.info(f"   segundo_nombre: {e.segundo_nombre}")
+    logging.info(f"   primer_apellido: {e.primer_apellido}")
+    logging.info(f"   segundo_apellido: {e.segundo_apellido}")
 
     return {
         "id": e.id,
@@ -157,7 +158,7 @@ async def create_employee(
 
             foto_path = process_employee_photo(contents)
         except Exception as e:
-            print(f"Error subiendo foto: {e}")
+            logging.error(f"Error subiendo foto: {e}", exc_info=True)
 
     # Determinar contraseña (si es admin es obligatoria, si no, generada)
     # El usuario dijo: "el formulario de empleados no debe llevar campo para registrar contraseña... administrador lleva un formulario diferente... con contraseña"
@@ -258,7 +259,7 @@ async def update_employee(
         except HTTPException:
             raise
         except Exception as e:
-            print(f"Error actualizando foto: {e}")
+            logging.error(f"Error actualizando foto: {e}", exc_info=True)
 
     # Actualizar campos de nombre separados y calcular nombre completo
     existing_emp.primer_nombre = primer_nombre
@@ -344,7 +345,7 @@ def migrate_employee_names(db = Depends(get_db)):
     Divide 'apellidos' en primer_apellido y segundo_apellido.
     """
     try:
-        print("\n🔄 [MIGRACIÓN] Iniciando migración de nombres...")
+        logging.info("\n🔄 [MIGRACIÓN] Iniciando migración de nombres...")
         employees = db.listar_empleados(incluir_inactivos=True)
         migrated_count = 0
 
@@ -372,16 +373,16 @@ def migrate_employee_names(db = Depends(get_db)):
                 db.actualizar_empleado(emp)
                 migrated_count += 1
 
-                print(f"   ✅ Migrado: {emp.nombre} {emp.apellidos} -> {primer_nombre}|{segundo_nombre}|{primer_apellido}|{segundo_apellido}")
+                logging.info(f"   ✅ Migrado: {emp.nombre} {emp.apellidos} -> {primer_nombre}|{segundo_nombre}|{primer_apellido}|{segundo_apellido}")
 
-        print(f"🎉 [MIGRACIÓN] Completada: {migrated_count} empleados migrados")
+        logging.info(f"🎉 [MIGRACIÓN] Completada: {migrated_count} empleados migrados")
         return {
             "message": "Migración completada",
             "migrated_count": migrated_count
         }
 
     except Exception as e:
-        print(f"❌ [MIGRACIÓN] Error: {str(e)}")
+        logging.error(f"❌ [MIGRACIÓN] Error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

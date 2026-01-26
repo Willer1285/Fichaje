@@ -4,6 +4,7 @@ from app.database.models import SolicitudVacacion, Ausencia
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
+import logging
 
 router = APIRouter(
     prefix="/api/requests",
@@ -72,24 +73,32 @@ def get_vacation_balance(employee_id: int, year: int, db = Depends(get_db)):
 def create_vacation_request(data: VacationRequest, db = Depends(get_db)):
     """Crea una nueva solicitud de vacaciones"""
     try:
+        logging.info(f"📥 [VACACIONES] Nueva solicitud de empleado {data.employee_id}")
+        logging.info(f"   Tipo: {data.tipo}, Desde: {data.fecha_inicio}, Hasta: {data.fecha_fin}")
+
         fecha_inicio = datetime.strptime(data.fecha_inicio, "%Y-%m-%d")
         fecha_fin = datetime.strptime(data.fecha_fin, "%Y-%m-%d")
-        
+
         # Calcular días laborables
         dias = db.calcular_dias_laborables(fecha_inicio, fecha_fin)
-        
+        logging.info(f"   Días laborables calculados: {dias}")
+
         # Validar saldo si es vacación anual
         if data.tipo == "vacaciones_anuales":
             saldo = db.obtener_saldo_vacaciones(data.employee_id, fecha_inicio.year)
-            
+
             # Obtener solicitudes pendientes para restar del saldo disponible
             pendientes = db.obtener_solicitudes_empleado(data.employee_id, solo_pendientes=True)
             dias_pendientes = sum(p.dias_solicitados for p in pendientes if p.tipo == "vacaciones_anuales")
-            
+
             total_solicitado = dias + dias_pendientes
-            
+
+            logging.info(f"   Saldo disponible: {saldo.dias_pendientes}, En trámite: {dias_pendientes}, Solicitado: {dias}")
+
             if total_solicitado > saldo.dias_pendientes:
-                raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Disponibles: {saldo.dias_pendientes}, En trámite: {dias_pendientes}, Solicitados ahora: {dias}. Total excedente: {total_solicitado - saldo.dias_pendientes}")
+                error_msg = f"Saldo insuficiente. Disponibles: {saldo.dias_pendientes}, En trámite: {dias_pendientes}, Solicitados ahora: {dias}. Total excedente: {total_solicitado - saldo.dias_pendientes}"
+                logging.warning(f"   ⚠️ {error_msg}")
+                raise HTTPException(status_code=400, detail=error_msg)
 
         solicitud = SolicitudVacacion(
             empleado_id=data.employee_id,
@@ -101,12 +110,14 @@ def create_vacation_request(data: VacationRequest, db = Depends(get_db)):
             estado="pendiente",
             motivo_empleado=data.motivo
         )
-        
+
         db.crear_solicitud_vacacion(solicitud)
+        logging.info(f"   ✅ Solicitud de vacaciones creada exitosamente")
         return {"message": "Solicitud enviada correctamente"}
     except HTTPException as he:
         raise he
     except Exception as e:
+        logging.error(f"   ❌ Error creando solicitud de vacaciones: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/employee/{employee_id}/absences")
@@ -146,10 +157,16 @@ def get_employee_absences(employee_id: int, db = Depends(get_db)):
 def create_absence_notification(data: AbsenceNotification, db = Depends(get_db)):
     """Crea una notificación de ausencia"""
     try:
+        logging.info(f"📥 [AUSENCIAS] Nueva notificación de empleado {data.employee_id}")
+        logging.info(f"   Tipo: {data.tipo}, Desde: {data.fecha_inicio}, Hasta: {data.fecha_fin}")
+        logging.info(f"   Por horas: {data.es_por_horas}, Horas: {data.horas_solicitadas if data.es_por_horas else 'N/A'}")
+
         # Validar permisos por horas
         if data.es_por_horas:
             if data.horas_solicitadas <= 0:
-                raise HTTPException(status_code=400, detail="La cantidad de horas debe ser mayor a 0")
+                error_msg = "La cantidad de horas debe ser mayor a 0"
+                logging.warning(f"   ⚠️ {error_msg}")
+                raise HTTPException(status_code=400, detail=error_msg)
             
             # Obtener empleado para verificar jornada
             empleado = db.obtener_empleado(data.employee_id)
@@ -177,8 +194,12 @@ def create_absence_notification(data: AbsenceNotification, db = Depends(get_db))
                         pass # Usar default si hay error parseando
             
             limite_horas = horas_jornada / 2
+            logging.info(f"   Jornada: {horas_jornada}h, Límite permitido: {limite_horas}h")
+
             if data.horas_solicitadas > limite_horas:
-                raise HTTPException(status_code=400, detail=f"Las horas solicitadas ({data.horas_solicitadas}) no pueden exceder la mitad de la jornada ({limite_horas} horas)")
+                error_msg = f"Las horas solicitadas ({data.horas_solicitadas}) no pueden exceder la mitad de la jornada ({limite_horas} horas)"
+                logging.warning(f"   ⚠️ {error_msg}")
+                raise HTTPException(status_code=400, detail=error_msg)
 
         ausencia = Ausencia(
             empleado_id=data.employee_id,
@@ -194,10 +215,12 @@ def create_absence_notification(data: AbsenceNotification, db = Depends(get_db))
             horas_solicitadas=data.horas_solicitadas
         )
         db.crear_ausencia(ausencia)
+        logging.info(f"   ✅ Notificación de ausencia creada exitosamente")
         return {"message": "Permiso notificado correctamente"}
     except HTTPException as he:
         raise he
     except Exception as e:
+        logging.error(f"   ❌ Error creando notificación de ausencia: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== ADMIN ====================

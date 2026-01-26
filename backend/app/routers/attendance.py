@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, date
 from typing import Optional, List
 from pydantic import BaseModel
 import json
+import logging
 
 router = APIRouter(
     prefix="/api/attendance",
@@ -63,7 +64,7 @@ def detect_absences(employee_id: int, db):
                     db.crear_ausencia_pendiente(employee_id, datetime.combine(fecha_iter, datetime.min.time()))
             fecha_iter += timedelta(days=1)
     except Exception as e:
-        print(f"Error detectando ausencias: {e}")
+        logging.error(f"❌ Error detectando ausencias: {e}", exc_info=True)
 
 def process_auto_checkout(db):
     """Cierra automáticamente fichajes olvidados"""
@@ -132,10 +133,10 @@ def process_auto_checkout(db):
                         pass
                         
         if count > 0:
-            print(f"Auto-Checkout: {count} fichajes cerrados automáticamente")
-            
+            logging.info(f"✅ Auto-Checkout: {count} fichajes cerrados automáticamente")
+
     except Exception as e:
-        print(f"Error en auto-checkout: {e}")
+        logging.error(f"❌ Error en auto-checkout: {e}", exc_info=True)
 
 @router.get("/status/{employee_id}")
 def get_employee_status(employee_id: int, db = Depends(get_db)):

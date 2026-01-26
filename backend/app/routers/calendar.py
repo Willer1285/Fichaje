@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_db
 from datetime import datetime, timedelta
+import logging
 
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
@@ -8,20 +9,20 @@ router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 def get_calendar_events(start: str, end: str, db = Depends(get_db)):
     """Obtiene eventos para el calendario (fichajes, vacaciones, ausencias)"""
     try:
-        print(f"\n📅 [GET /calendar/events] Solicitando eventos para rango {start} a {end}")
+        logging.info(f"\n📅 [GET /calendar/events] Solicitando eventos para rango {start} a {end}")
         start_date = datetime.strptime(start, "%Y-%m-%d")
         end_date = datetime.strptime(end, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-        print(f"   start_date (datetime): {start_date}")
-        print(f"   end_date (datetime): {end_date}")
+        logging.info(f"   start_date (datetime): {start_date}")
+        logging.info(f"   end_date (datetime): {end_date}")
 
         events = []
 
         # 1. Fichajes (Llegadas tarde, asistencias)
         fichajes = db.obtener_todos_fichajes_periodo(start_date, end_date)
-        print(f"✅ [Calendar] Fichajes encontrados: {len(fichajes)}")
+        logging.info(f"✅ [Calendar] Fichajes encontrados: {len(fichajes)}")
 
         if len(fichajes) > 0:
-            print(f"   Primer fichaje: fecha={fichajes[0][0].fecha}, empleado={fichajes[0][1].nombre}")
+            logging.info(f"   Primer fichaje: fecha={fichajes[0][0].fecha}, empleado={fichajes[0][1].nombre}")
 
         turnos = {t.id: t for t in db.listar_turnos()}
         config = db.obtener_configuracion()
@@ -64,7 +65,7 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
             }
 
             if len(events) == 0:  # Solo logear el primer evento
-                print(f"   📌 Primer evento creado: id={event['id']}, start={event['start']}, title={event['title']}")
+                logging.info(f"   📌 Primer evento creado: id={event['id']}, start={event['start']}, title={event['title']}")
 
             events.append(event)
 
@@ -189,14 +190,12 @@ def get_calendar_events(start: str, end: str, db = Depends(get_db)):
                         }
                     })
 
-        print(f"📊 [Calendar] Total eventos devueltos: {len(events)}")
+        logging.info(f"📊 [Calendar] Total eventos devueltos: {len(events)}")
         if len(events) > 0:
-            print(f"   Primer evento: {events[0]}")
+            logging.info(f"   Primer evento: {events[0]}")
 
         return events
 
     except Exception as e:
-        print(f"❌ Error fetching calendar events: {e}")
-        import traceback
-        traceback.print_exc()
+        logging.error(f"❌ Error fetching calendar events: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error al obtener eventos del calendario: {str(e)}")
